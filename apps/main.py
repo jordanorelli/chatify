@@ -20,6 +20,7 @@ from dictshield.fields import(
 
 ## hold our messages in memory here, limit to last 20
 LIST_SIZE = 20
+users_online = []
 chat_messages = []
 
 ## Our long polling interval
@@ -97,6 +98,19 @@ class FeedHandler(JSONMessageHandler):
             self.add_to_payload('message','VALIDATION ERROR: %s' % (se))
         return self.render()
 
+class LoginHandler(JSONMessageHandler):
+    """Allows users to enter the chat room.  Does no authentication."""
+
+    def post(self):
+        nickname = self.get_argument('nickname')
+        users_online.append(nickname)
+        self.set_status(200)
+        msg = ChatMessage(timestamp=int(time.time()), nickname='system',
+            message='%s has entered the room.' % nickname, msgtype='system')
+        print repr(msg)
+        add_message(msg)
+        return self.render()
+
 
 project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 template_dir = os.path.join(project_dir, 'templates')
@@ -105,6 +119,7 @@ config = {
     'handler_tuples': [
         (r'^/$', ChatifyHandler),
         (r'^/feed$', FeedHandler),
+        (r'^/login$', LoginHandler),
     ],
     'template_loader': load_jinja2_env(template_dir),
 }
