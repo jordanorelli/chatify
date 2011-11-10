@@ -47,16 +47,25 @@
 
     $(document).ready(function(){
         waitForMsg();
-        $('#nickname').change(function(event){
-            $this = $(this);
-            if($this.val()!=''){
-                // disable changing our name
-                $('#nickname').attr("disabled", "disabled");
-                // enable sending new messages
+        var $nickField = $('#nickname');
+
+        $nickField.keypress(function(event){
+            if($(this).val()!=''){
                 $('#message').removeAttr("disabled");
                 $('#send').removeAttr("disabled");
+            } else {
+                $('#message').attr("disabled", "disabled");
+                $('#send').attr("disabled", "disabled");
             }
         });
+
+        $nickField.change(function(event){
+            if($(this).val()!=''){
+                $(this).attr("disabled", "disabled");
+                $('#message').focus();
+            }
+        });
+
         $('#send').click(function(event){
             $this = $(this);
             if($('#message').val()!=''){
@@ -85,6 +94,7 @@
   <div id="header">
     Brubeck chatify demo
   </div>
+  <label for="nickname">nick:</label>
   <input id="nickname" type="text"/>
   <textarea id="message" disabled="disabled"></textarea>
   <input id="send" type="button" value="send" disabled="disabled" />
