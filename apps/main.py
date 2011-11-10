@@ -44,6 +44,8 @@ class ChatMessage(EmbeddedDocument):
     timestamp = FloatField(default=time.time)
     nickname = StringField(required=True, max_length=40)
     message = StringField(required=True)
+    msgtype = StringField(default='user',
+                          choices=['user', 'error', 'system'])
 
     def __init__(self, *args, **kwargs):
         super(ChatMessage, self).__init__(*args, **kwargs)

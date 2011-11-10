@@ -1,11 +1,14 @@
 var since_timestamp = 0;
 
-function addmsg(type, msg) {
+var $nick;
+var $messages;
+
+function addmsg(msg) {
   var chat_message = '';
   for (var i = 0; i <  msg.messages.length; i++) {
     chat_message = msg.messages[i];
     $("#messages").prepend(
-      "<div class='msg "+ type +"'>"+  chat_message.nickname + ": " + chat_message.message +"</div>"
+      "<div class='msg "+ msg.msgtype +"'>"+  chat_message.nickname + ": " + chat_message.message +"</div>"
     );
   }
   return  chat_message.timestamp;
@@ -20,12 +23,16 @@ function waitForMsg() {
     timeout:50000,
     data: 'since_timestamp=' + since_timestamp,
     success: function(data) {
-      since_timestamp = addmsg("new", data);
+      since_timestamp = addmsg(data);
       setTimeout('waitForMsg()', 1000);
     },
-
     error: function(XMLHttpRequest, textStatus, errorThrown) {
-      addmsg("error", textStatus + " (" + errorThrown + ")");
+      addmsg({
+        timestamp: '',
+        nickname: errorThrown,
+        messagr: textStatus,
+        msgtype: 'error',
+      });
       setTimeout('waitForMsg()', "15000");
     },
   });
