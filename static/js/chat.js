@@ -1,18 +1,13 @@
-function addmsg(data) {
+function addmessages(messages, target_id) {
   var latest_timestamp = 0;
-  var chat_message = '';
-  for (var i = 0; i <  data.messages.length; i++) {
-    chat_message = data.messages[i];
-    if (chat_message.timestamp > latest_timestamp) {
-      latest_timestamp = chat_message.timestamp;
+  for (var i = 0; i <  messages.length; i++) {
+    var m = messages[i];
+    if (m.timestamp > latest_timestamp) {
+      latest_timestamp = m.timestamp;
     }
-    $("#messages").prepend(
-      "<div class='data " + data.datatype + "'>" + latest_timestamp + ": " +
-        chat_message.timestamp +"</div>"
-    );
-    $("#messages").prepend(
-      "<div class='data "+ data.datatype +"'>"+  chat_message.nickname + ": " +
-        chat_message.message +"</div>"
+    $(target_id).prepend(
+      "<div class='messages "+ messages.msgtype +"'>"+  m.nickname + ": " +
+        m.message +"</div>"
     );
   }
   return latest_timestamp;
@@ -27,12 +22,12 @@ function waitForMsg(since_timestamp) {
     timeout:50000,
     data: 'since_timestamp=' + since_timestamp,
     success: function(data) {
-      since_timestamp = addmsg(data);
+      since_timestamp = addmessages(data.messages, '#messages');
       console.log("waitForMsg success block hit.");
       setTimeout('waitForMsg(' + since_timestamp + ')', 1000);
     },
     error: function(XMLHttpRequest, textStatus, errorThrown) {
-      addmsg({
+      addmessages({
         timestamp: '',
         nickname: errorThrown,
         messagr: textStatus,
