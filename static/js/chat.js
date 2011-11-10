@@ -1,16 +1,15 @@
-function addmessages(messages, target_id) {
-  var latest_timestamp = 0;
+function addmessages(messages, target_id, since_timestamp) {
   for (var i = 0; i <  messages.length; i++) {
     var m = messages[i];
-    if (m.timestamp > latest_timestamp) {
-      latest_timestamp = m.timestamp;
+    if (m.timestamp > since_timestamp) {
+      since_timestamp = m.timestamp;
     }
     $(target_id).prepend(
       "<div class='messages "+ messages.msgtype +"'>"+  m.nickname + ": " +
         m.message +"</div>"
     );
   }
-  return latest_timestamp;
+  return since_timestamp;
 }
 
 function waitForMsg(since_timestamp) {
@@ -22,17 +21,17 @@ function waitForMsg(since_timestamp) {
     timeout:50000,
     data: 'since_timestamp=' + since_timestamp,
     success: function(data) {
-      since_timestamp = addmessages(data.messages, '#messages');
+      since_timestamp = addmessages(data.messages, '#messages', since_timestamp);
       console.log("waitForMsg success block hit.");
       setTimeout('waitForMsg(' + since_timestamp + ')', 1000);
     },
     error: function(XMLHttpRequest, textStatus, errorThrown) {
-      addmessages({
+      since_timestamp = addmessages({
         timestamp: '',
         nickname: errorThrown,
         messagr: textStatus,
         msgtype: 'error',
-      });
+      }, '#messages', since_timestamp);
       setTimeout('waitForMsg(' + since_timestamp + ')', "15000");
       alert("OH FUCK");
     },
