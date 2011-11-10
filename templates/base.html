@@ -1,0 +1,93 @@
+<html>
+  <head>
+    <title>Chatify</title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+    <style type="text/css" media="screen">
+      body { background:#fff; color:#000; font-size:.9em; }
+      #header { background: #333; color: #fff; padding: 10px;}
+      #input_box { background: border: 1px #ccc solid; padding: 10px; width: 100%;}
+      .msg{ background:#aaa; border-bottom: 1px #000 solid; padding: 3px;}
+      .old{ background-color:#9999ff;}
+      .new{ background-color:#99ff99;}
+      .error{ background-color:#ff9999;}
+    </style>
+
+    <script type="text/javascript" charset="utf-8">
+      var since_timestamp = 0;
+      function addmsg(type, msg) {
+        since_timestamp = msg.messages.timestamp;
+        for (i = 0; i <  msg.messages.messages.length; i++) {
+            chat_message = msg.messages.messages[i];
+            $("#messages").prepend(
+              "<div class='msg "+ type +"'>"+  chat_message.message +"</div>"
+            );
+        }
+      }
+
+      function waitForMsg() {
+        $.ajax({
+            type: "GET",
+            url: "/chatfeed",
+            async: true,
+            cache: false,
+            timeout:50000,
+            data: 'since_timestamp=' + since_timestamp,
+            success: function(data) { 
+                addmsg("new", data);
+                setTimeout('waitForMsg()', 1000);
+            },
+
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+                addmsg("error", textStatus + " (" + errorThrown + ")");
+                setTimeout('waitForMsg()', "15000");
+            },
+        });
+    };
+
+    $(document).ready(function(){
+        waitForMsg();
+        $('#nickname').change(function(event){
+            $this = $(this);
+            if($this.val()!=''){
+                // disable changing our name
+                $('#nickname').attr("disabled", "disabled");
+                // enable sending new messages
+                $('#message').removeAttr("disabled");
+                $('#send').removeAttr("disabled");
+            }
+        });
+        $('#send').click(function(event){
+            $this = $(this);
+            if($('#message').val()!=''){
+                var message = $('#message').val();
+                var nickname = $('#nickname').val();
+                // disable changing our name
+                $this.attr("disabled", "disabled");
+                // enable sending new messages
+                $('#message').attr("disabled","disabled");
+                $.ajax({type: 'POST',
+                        url: '/add',
+                        data: 'nickname=' + nickname + '&message=' + message,
+                        success: function(){ $('#message').val("");  },
+                        error: function(){ alert("unable to send message!");},
+                        complete: function(){ 
+                                $('#message').removeAttr("disabled");
+                                $('#send').removeAttr("disabled");
+                            }
+                       });
+            }
+        });
+    });
+    </script>
+</head>
+<body>
+  <div id="header">
+    Brubeck chatify demo
+  </div>
+  <input id="nickname" type="text"/>
+  <textarea id="message" disabled="disabled"></textarea>
+  <input id="send" type="button" value="send" disabled="disabled" />
+  <div id="messages">
+  </div>
+</body>
+</html>
