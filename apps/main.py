@@ -25,19 +25,21 @@ chat_messages = []
 ## Our long polling interval
 POLL_INTERVAL = 5
 
-## Add a message to our in memory collection
 def add_message(chat_message):
-    ## use the servers current time as a key so the user can request only newer items after the initial load
+    """Adds a message to our message history. A server timestamp is used to
+    avoid sending duplicates."""
     chat_messages.append(chat_message)
-    ## we only need to store the most recent items
     if len(chat_messages) > LIST_SIZE:
-        ## remove the first(oldest) element of the list
         chat_message.pop(0)
 
-## get new messages since a certain timestamp
-def get_messages(since_timestamp):
-    return filter(lambda x: x.timestamp > float(since_timestamp),
-                  chat_messages)
+def get_messages(since_timestamp=0):
+    """get new messages since a certain timestamp"""
+    messages = filter(lambda x: float(x.timestamp) > float(since_timestamp),
+                      chat_messages)
+    print "messages since %f: %r" % (since_timestamp,
+                                     [(repr(m), m.timestamp)
+                                      for m in messages])
+    return messages
 
 class ChatMessage(EmbeddedDocument):
     """A single message"""
@@ -50,6 +52,9 @@ class ChatMessage(EmbeddedDocument):
     def __init__(self, *args, **kwargs):
         super(ChatMessage, self).__init__(*args, **kwargs)
         print "%f: %s: %s" % (self.timestamp, self.nickname, self.message)
+
+    def __repr__(self):
+        return '<ChatMessage: %s>' % self.message
 
 
 class ChatifyHandler(WebMessageHandler, Jinja2Rendering):
@@ -66,14 +71,15 @@ class FeedHandler(JSONMessageHandler):
 
     def get(self):
         try:
-            since_timestamp = float(self.get_argument('since_timestamp', 0))
-        except Exception:
-            since_timestamp = 0
+            messages = get_messages(float(self.get_argument('since_timestamp', 0)))
+        except ValueError as e:
+            print str(e)
+            messages = get_messages()
 
         gevent.sleep(POLL_INTERVAL) # simple way to demo long polling :)
         self.set_status(200)
-        self.add_to_payload('messages', get_messages(since_timestamp))
         self.headers= {'Content-Type': 'application/json'}
+        self.add_to_payload('messages', messages)
         return self.render()
 
     def post(self):

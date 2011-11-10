@@ -1,20 +1,24 @@
-var since_timestamp = 0;
-
-var $nick;
-var $messages;
-
-function addmsg(msg) {
+function addmsg(data) {
+  var latest_timestamp = 0;
   var chat_message = '';
-  for (var i = 0; i <  msg.messages.length; i++) {
-    chat_message = msg.messages[i];
+  for (var i = 0; i <  data.messages.length; i++) {
+    chat_message = data.messages[i];
+    if (chat_message.timestamp > latest_timestamp) {
+      latest_timestamp = chat_message.timestamp;
+    }
     $("#messages").prepend(
-      "<div class='msg "+ msg.msgtype +"'>"+  chat_message.nickname + ": " + chat_message.message +"</div>"
+      "<div class='data " + data.datatype + "'>" + latest_timestamp + ": " +
+        chat_message.timestamp +"</div>"
+    );
+    $("#messages").prepend(
+      "<div class='data "+ data.datatype +"'>"+  chat_message.nickname + ": " +
+        chat_message.message +"</div>"
     );
   }
-  return  chat_message.timestamp;
+  return latest_timestamp;
 }
 
-function waitForMsg() {
+function waitForMsg(since_timestamp) {
   $.ajax({
     type: "GET",
     url: "/feed",
@@ -24,7 +28,8 @@ function waitForMsg() {
     data: 'since_timestamp=' + since_timestamp,
     success: function(data) {
       since_timestamp = addmsg(data);
-      setTimeout('waitForMsg()', 1000);
+      console.log("waitForMsg success block hit.");
+      setTimeout('waitForMsg(' + since_timestamp + ')', 1000);
     },
     error: function(XMLHttpRequest, textStatus, errorThrown) {
       addmsg({
@@ -33,13 +38,14 @@ function waitForMsg() {
         messagr: textStatus,
         msgtype: 'error',
       });
-      setTimeout('waitForMsg()', "15000");
+      setTimeout('waitForMsg(' + since_timestamp + ')', "15000");
+      alert("OH FUCK");
     },
   });
 };
 
 $(document).ready(function(){
-  waitForMsg();
+  var since_timestamp = 0;
   var $nickField = $('#nickname');
   var $messageBox = $('#message');
 
@@ -75,7 +81,10 @@ $(document).ready(function(){
         type: 'POST',
         url: '/feed',
         data: 'nickname=' + nickname + '&message=' + message,
-        success: function(){ $messageBox.val("");  },
+        success: function(){
+          console.log("Hit send success block.");
+          $messageBox.val("")
+        },
         error: function(){ alert("unable to send message!");},
         complete: function(){
           $messageBox.removeAttr("disabled");
@@ -84,4 +93,6 @@ $(document).ready(function(){
       });
     }
   });
+
+  waitForMsg(since_timestamp);
 });
