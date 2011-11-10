@@ -34,7 +34,7 @@ def add_message(chat_message):
 
 def get_messages(since_timestamp=0):
     """get new messages since a certain timestamp"""
-    messages = filter(lambda x: float(x.timestamp) > float(since_timestamp),
+    messages = filter(lambda x: x.timestamp > since_timestamp,
                       chat_messages)
     print "messages since %f: %r" % (since_timestamp,
                                      [(repr(m), m.timestamp)
@@ -43,7 +43,7 @@ def get_messages(since_timestamp=0):
 
 class ChatMessage(EmbeddedDocument):
     """A single message"""
-    timestamp = FloatField(default=time.time)
+    timestamp = IntField(required=True)
     nickname = StringField(required=True, max_length=40)
     message = StringField(required=True)
     msgtype = StringField(default='user',
@@ -51,6 +51,7 @@ class ChatMessage(EmbeddedDocument):
 
     def __init__(self, *args, **kwargs):
         super(ChatMessage, self).__init__(*args, **kwargs)
+        self.timestamp = int(time.time())
         print "%f: %s: %s" % (self.timestamp, self.nickname, self.message)
 
     def __repr__(self):
@@ -71,7 +72,7 @@ class FeedHandler(JSONMessageHandler):
 
     def get(self):
         try:
-            messages = get_messages(float(self.get_argument('since_timestamp', 0)))
+            messages = get_messages(int(self.get_argument('since_timestamp', 0)))
         except ValueError as e:
             print str(e)
             messages = get_messages()
