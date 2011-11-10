@@ -19,7 +19,7 @@
         for (var i = 0; i <  msg.messages.length; i++) {
             chat_message = msg.messages[i];
             $("#messages").prepend(
-              "<div class='msg "+ type +"'>"+  chat_message.message +"</div>"
+              "<div class='msg "+ type +"'>"+  chat_message.nickname + ": " + chat_message.message +"</div>"
             );
         }
         return  chat_message.timestamp;
