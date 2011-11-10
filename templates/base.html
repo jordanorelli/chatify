@@ -28,7 +28,7 @@
       function waitForMsg() {
         $.ajax({
             type: "GET",
-            url: "/chatfeed",
+            url: "/feed",
             async: true,
             cache: false,
             timeout:50000,
@@ -67,7 +67,7 @@
                 // enable sending new messages
                 $('#message').attr("disabled","disabled");
                 $.ajax({type: 'POST',
-                        url: '/add',
+                        url: '/feed',
                         data: 'nickname=' + nickname + '&message=' + message,
                         success: function(){ $('#message').val("");  },
                         error: function(){ alert("unable to send message!");},

@@ -51,6 +51,7 @@ class ChatMessage(EmbeddedDocument):
 
 
 class ChatifyHandler(WebMessageHandler, Jinja2Rendering):
+    """Renders the chat interface template."""
 
     def get(self):
         # just start us up, it's all in the AJAX
@@ -58,7 +59,20 @@ class ChatifyHandler(WebMessageHandler, Jinja2Rendering):
         return self.render_template('base.html')
 
 
-class JSONAddMessageHandler(JSONMessageHandler):
+class FeedHandler(JSONMessageHandler):
+    """Handles poll requests from user; sends out queued messages."""
+
+    def get(self):
+        try:
+            since_timestamp = float(self.get_argument('since_timestamp', 0))
+        except Exception:
+            since_timestamp = 0
+
+        gevent.sleep(POLL_INTERVAL) # simple way to demo long polling :)
+        self.set_status(200)
+        self.add_to_payload('messages', get_messages(since_timestamp))
+        self.headers= {'Content-Type': 'application/json'}
+        return self.render()
 
     def post(self):
         nickname = self.get_argument('nickname')
@@ -75,33 +89,19 @@ class JSONAddMessageHandler(JSONMessageHandler):
         return self.render()
 
 
-class JSONChatFeedHandler(JSONMessageHandler):
-    def get(self):
-        try:
-            since_timestamp = float(self.get_argument('since_timestamp', 0))
-        except Exception:
-            since_timestamp = 0
-
-        gevent.sleep(POLL_INTERVAL) # simple way to demo long polling :)
-        self.set_status(200)
-        self.add_to_payload('messages', get_messages(since_timestamp))
-        self.headers= {'Content-Type': 'application/json'}
-        return self.render()
-
 project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 template_dir = os.path.join(project_dir, 'templates')
 config = {
     'mongrel2_pair': ('ipc://run/mongrel2_send', 'ipc://run/mongrel2_recv'),
-    'handler_tuples': [(r'^/$', ChatifyHandler),
-                       (r'^/add', JSONAddMessageHandler),
-                       (r'^/chatfeed', JSONChatFeedHandler)],
+    'handler_tuples': [
+        (r'^/$', ChatifyHandler),
+        (r'^/feed$', FeedHandler),
+    ],
     'template_loader': load_jinja2_env(template_dir),
 }
 
 
 app = Brubeck(**config)
 ## this allows us to import the demo as a module for unit tests without running the server
-print "project_dir: %s" % project_dir
-print "template_dir: %s" % template_dir
 if __name__ == "__main__":
     app.run()
