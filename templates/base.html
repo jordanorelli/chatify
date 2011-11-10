@@ -15,13 +15,14 @@
     <script type="text/javascript" charset="utf-8">
       var since_timestamp = 0;
       function addmsg(type, msg) {
-        since_timestamp = msg.messages.timestamp;
-        for (i = 0; i <  msg.messages.messages.length; i++) {
-            chat_message = msg.messages.messages[i];
+        var chat_message = '';
+        for (var i = 0; i <  msg.messages.length; i++) {
+            chat_message = msg.messages[i];
             $("#messages").prepend(
               "<div class='msg "+ type +"'>"+  chat_message.message +"</div>"
             );
         }
+        return  chat_message.timestamp;
       }
 
       function waitForMsg() {
@@ -32,8 +33,8 @@
             cache: false,
             timeout:50000,
             data: 'since_timestamp=' + since_timestamp,
-            success: function(data) { 
-                addmsg("new", data);
+            success: function(data) {
+                since_timestamp = addmsg("new", data);
                 setTimeout('waitForMsg()', 1000);
             },
 

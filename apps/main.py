@@ -32,44 +32,34 @@ def add_message(chat_message):
     ## we only need to store the most recent items
     if len(chat_messages) > LIST_SIZE:
         ## remove the first(oldest) element of the list
-        del chatmessages[0]
+        chat_message.pop(0)
 
 ## get new messages since a certain timestamp
 def get_messages(since_timestamp):
-    since_timestamp = float(since_timestamp)
-    newer_chat_messages = ChatMessages()
-    newer_chat_messages.timestamp = since_timestamp
-    if(len(chat_messages) > 0):
-        ## see if we have any newer messages
-        last_message_timestamp = float(chat_messages[-1].timestamp)
-        if since_timestamp < last_message_timestamp:
-            ## loop through our messages only adding the newer ones
-            for message in chat_messages:                
-                if since_timestamp < float(message.timestamp):
-                    newer_chat_messages.messages.append(message)
-                    newer_chat_messages.timestamp = message.timestamp
-    return newer_chat_messages
+    return filter(lambda x: x.timestamp > float(since_timestamp),
+                  chat_messages)
 
-## A single message
 class ChatMessage(EmbeddedDocument):
-    timestamp =  FloatField(default=time.time)
+    """A single message"""
+    timestamp = FloatField(default=time.time)
     nickname = StringField(required=True, max_length=40)
     message = StringField(required=True)
 
-## a collection of messages
-class ChatMessages(Document):
-    timestamp = FloatField(default=time.time)
-    messages = ListField(EmbeddedDocumentField(ChatMessage))
+    def __init__(self, *args, **kwargs):
+        super(ChatMessage, self).__init__(*args, **kwargs)
+        print "%f: %s: %s" % (self.timestamp, self.nickname, self.message)
 
 
 class ChatifyHandler(WebMessageHandler, Jinja2Rendering):
-    
+
     def get(self):
         # just start us up, it's all in the AJAX
         # self.set_body('Take five, %s!' % name)
         return self.render_template('base.html')
 
+
 class JSONAddMessageHandler(JSONMessageHandler):
+
     def post(self):
         nickname = self.get_argument('nickname')
         message = self.get_argument('message')
@@ -83,6 +73,7 @@ class JSONAddMessageHandler(JSONMessageHandler):
             self.set_status('ERROR');
             self.add_to_payload('message','VALIDATION ERROR: %s' % (se))
         return self.render()
+
 
 class JSONChatFeedHandler(JSONMessageHandler):
     def get(self):
