@@ -46,7 +46,17 @@ function login(nickname) {
     async: true,
     cache: false,
     timeout: 30000,
-    data: 'nickname=' + nickname
+    data: 'nickname=' + nickname,
+    success: function(data){
+      $("#login-form").css("display", "none");
+      $("#send-form").css("display", "block");   
+      $("#whoiam").html($("#nickname").val() + " : ");
+      $("#message").focus();
+    },
+    error: function(data, errorText){
+      $("#nickname").removeAttr("disabled");
+      $("#login").removeAttr("disabled");
+    }
   });
 }
 
@@ -54,29 +64,31 @@ $(document).ready(function(){
   var since_timestamp = 0;
   var $nickField = $('#nickname');
   var $messageBox = $('#message');
+  var $loginForm = $('#login-form');
+  var $sendForm = $('#send-form');
+  var $loginButton = $('#login');
+  var $sendButton = $('#send');
 
   $nickField.focus();
-
-  $nickField.keypress(function(event){
-    if($(this).val()!=''){
-      $messageBox.removeAttr("disabled");
-      $('#send').removeAttr("disabled");
-    } else {
-      $messageBox.attr("disabled", "disabled");
-      $('#send').attr("disabled", "disabled");
-    }
-  });
 
   $nickField.change(function(event){
     var nickname = $(this).val();
     if(nickname!=''){
-      login(nickname);
       $(this).attr("disabled", "disabled");
-      $messageBox.focus();
+      $("login").attr("disabled","disabled");
+      login(nickname);
     }
   });
 
-  $('#send').click(function(event){
+  $loginButton.click( function(event){
+    var nickname = $("nickname").val();
+    if(nickname!=''){
+        $("nickname").attr("disabled", "disabled");
+        $(this).attr("disabled", "disabled");
+        login(nickname);
+    }
+  });
+  $sendButton.click(function(event){
     $this = $(this);
     if($messageBox.val()!=''){
       var message = $messageBox.val();

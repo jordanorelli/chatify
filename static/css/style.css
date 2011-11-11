@@ -1,5 +1,60 @@
-body { background:#fff; color:#000; font-size:.9em; }
-#header { background: #333; color: #fff; padding: 10px;}
+body { 
+    background:#fff; 
+    color:#000; 
+    font-size:.9em;
+    padding: 0;
+    margin: 0;
+}
+#header { 
+    position: fixed;
+    top: 0;
+    font-family: 'Josefin Slab', arial, serif;
+    font-size: 16pt;
+    background: #333; 
+    color: #fff; 
+    padding: 10px;
+    height: 28px;
+    width: 100%;
+}
+#content {
+    margin-top: 48px;
+}
+#login-form, #send-form {
+    font-size: 14pt;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+
+
+
+#footer {
+    font-size: 14pt;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#whoiam, #message, #send, 
+#whoareyou, #nickname, #login
+{
+    padding: .5%;
+}
+#whoareyou, #whoiam {
+    width: 10%;
+    display: block;
+    float: left;
+}
+#nickname, #message {
+    width: 78%;
+}
+#login, #send {
+    width: 10%;
+}
+
 #input_box { background: border: 1px #ccc solid; padding: 10px; width: 100%;}
 .msg{ background:#aaa; border-bottom: 1px #000 solid; padding: 3px;}
 .old{ background-color:#9999ff;}

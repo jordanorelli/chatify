@@ -7,13 +7,27 @@
 </head>
 <body>
   <div id="header">
-    Brubeck chatify demo
+    Chatify, a Brubeck demo built in the belly of Spotify by a couple hackers.
   </div>
-  <label for="nickname">nick:</label>
-  <input id="nickname" type="text"/>
-  <textarea id="message" disabled="disabled"></textarea>
-  <input id="send" type="button" value="send" disabled="disabled" />
-  <div id="messages">
+  <div id="content">
+      <div id="messages">
+      </div>
+  </div>
+  <div id="footer">
+      <div id="login-form">
+          <form name="login" action="">
+              <label id="whoareyou" for="nickname">Who are you?</label>
+              <input id="nickname" type="text"/>
+              <input id="login" type="sunmit" name="join" value="join" />
+          </form>
+      </div>
+      <div id="send-form" style="display: none;">
+          <form name="send" action="">
+              <label id="whoiam" for="message">anonymous:</label>
+              <input id="message" type="text"></textarea>
+              <input id="send" type="submit" name="send" value="send" />
+          </form>
+      </div>
   </div>
 </body>
 </html>
