@@ -8,6 +8,7 @@ function addmessages(messages, target_id, since_timestamp) {
       "<div class='messages "+ m.msgtype +"'>"+  m.nickname + ": " +
         m.message +"</div>"
     );
+    $(document).scrollTop($(document).height()+500);      
   }
   return since_timestamp;
 }

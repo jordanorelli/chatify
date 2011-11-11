@@ -19,6 +19,10 @@ body {
 #content {
     margin-top: 48px;
 }
+#messages {
+    padding-bottom: 4em;
+    overflow: hidden;
+}
 #login-form, #send-form {
     font-size: 14pt;
     width: 100%;
@@ -36,6 +40,8 @@ body {
     width: 100%;
     margin: 0;
     padding: 0;
+    background: #fff;
+    z-index: 99;
 }
 
 #whoiam, #message, #send, 
