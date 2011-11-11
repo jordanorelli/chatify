@@ -32,7 +32,7 @@ def add_message(chat_message):
     avoid sending duplicates."""
     chat_messages.append(chat_message)
     if len(chat_messages) > LIST_SIZE:
-        chat_message.pop(0)
+        chat_messages.pop(0)
 
 def get_messages(since_timestamp=0):
     """get new messages since a certain timestamp"""
