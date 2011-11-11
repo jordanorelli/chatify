@@ -19,7 +19,7 @@ from dictshield.fields import(
 )
 
 ## hold our messages in memory here, limit to last 20
-LIST_SIZE = 20
+LIST_SIZE = 50
 users_online = []
 chat_messages = []
 new_message_event = Event()
