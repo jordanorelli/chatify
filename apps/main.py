@@ -6,7 +6,7 @@ import gevent
 import os
 import sys
 import time
-
+from gevent.event import Event
 from brubeck.request_handling import(
     Brubeck, JSONMessageHandler,
     WebMessageHandler
@@ -22,6 +22,7 @@ from dictshield.fields import(
 LIST_SIZE = 20
 users_online = []
 chat_messages = []
+new_message_event = Event()
 
 ## Our long polling interval
 POLL_INTERVAL = 5
@@ -78,7 +79,9 @@ class FeedHandler(JSONMessageHandler):
             print str(e)
             messages = get_messages()
 
-        gevent.sleep(POLL_INTERVAL) # simple way to demo long polling :)
+        if len(messages)==0:
+            new_message_event.wait(POLL_INTERVAL)
+        
         self.set_status(200)
         self.headers= {'Content-Type': 'application/json'}
         self.add_to_payload('messages', messages)
@@ -91,8 +94,13 @@ class FeedHandler(JSONMessageHandler):
         try:
             chat_message.validate()
             add_message(chat_message)
+
+            new_message_event.set()
+            new_message_event.clear()
+
             self.set_status(200);
             self.add_to_payload('message','message sent')
+
         except ShieldException, se:
             self.set_status('ERROR');
             self.add_to_payload('message','VALIDATION ERROR: %s' % (se))
