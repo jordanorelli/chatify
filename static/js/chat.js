@@ -4,7 +4,7 @@ function addmessages(messages, target_id, since_timestamp) {
     if (m.timestamp > since_timestamp) {
       since_timestamp = m.timestamp;
     }
-    $(target_id).prepend(
+    $(target_id).append(
       "<div class='messages "+ m.msgtype +"'>"+  m.nickname + ": " +
         m.message +"</div>"
     );
