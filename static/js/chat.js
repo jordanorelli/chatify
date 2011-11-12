@@ -9,13 +9,13 @@ function addmessages(messages, target_id, since_timestamp) {
     date.setTime(m.timestamp * 1000);
     var timeFormatted = date.toString().split(' ')[4];
     $(target_id).append(
-      '<div class="message-item ' + m.msgtype + '">' + 
-      '<span class="message-nickname">' + m.nickname     + '</span>' + 
+      '<div class="message-item ' + m.msgtype + '">' +
+      '<span class="message-nickname">' + m.nickname     + '</span>' +
       '<span class="message-text">'     + m.message      + '</span>' +
       '<span class="message-time">'     + timeFormatted  + '</span>' +
       '</div>'
     );
-    $(document).scrollTop($(document).height()+500);      
+    $(document).scrollTop($(document).height()+500);
   }
   return since_timestamp;
 }
@@ -147,7 +147,7 @@ $(document).ready(function(){
   });
   $sendButton.click(function(event){
     var $this = $(this);
-    if($("#message").val()!=''){
+    if($("#message").val().trim()!=''){
       var message = $("#message").val();
       var nickname = $('#nickname').val();
       // disable sending twice
