@@ -10,22 +10,27 @@
     Chatify, a Brubeck demo built in the belly of Spotify by a couple hackers.
   </div>
   <div id="content">
-      <div id="messages">
-      </div>
-  </div>
-  <div id="footer">
       <div id="login-form">
+          <p id="intro">
+          Chatify is a simple chat server built using the <a href="http://brubeck.io">Brubeck</a> messaging framework. 
+          Leveraging the power of Python and Gevent make building a scalable chat server simple and fun.
+          Check out the source code <a href="http://github.com/jordanorelli/chatify">here</a>.
+          </p>
           <form name="login" action="">
               <label id="whoareyou" for="nickname">Who are you?</label>
               <input id="nickname" type="text" />
-              <input id="login" type="submit" name="join" value="join" />
+              <input id="login" type="submit" name="join" value="join" disabled="disabled"/>
           </form>
       </div>
+      <div id="messages" style="display: none;">
+      </div>
+  </div>
+  <div id="footer">
       <div id="send-form" style="display: none;">
           <form name="send" action="">
               <label id="whoiam" for="message">anonymous:</label>
               <input id="message" type="text" />
-              <input id="send" type="submit" name="send" value="send" />
+              <input id="send" type="submit" name="send" value="send" disabled="disabled"/>
           </form>
       </div>
   </div>

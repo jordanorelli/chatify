@@ -23,7 +23,19 @@ body {
     padding-bottom: 4em;
     overflow: hidden;
 }
-#login-form, #send-form {
+#intro {
+    width: 20em;
+    line-height: 1.5em;
+    margin: 4em 1em 1em 1em;
+}
+#login-form {
+    font-size: 14pt;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+#send-form {
     font-size: 14pt;
     width: 100%;
     padding: 0;
@@ -40,30 +52,60 @@ body {
     background: #fff;
     z-index: 99;
 }
-
-#whoiam, #message, #send, 
+#intro {
+    color: #333;
+    margin: 4em 1em 1em 1em;
+    line-height: 1.5em;
+    text-align: justify;
+    width: 30em;
+}
 #whoareyou, #nickname, #login
+{
+    color: #000000;
+    margin: .5em;
+    padding: .5em;
+}
+
+#whoareyou {
+    width: 20em;
+    display: block;
+    font-weight: bold;
+}
+
+#nickname {
+    width: 20em;
+    display: block;
+    margin-left: 2em;
+}
+
+#login {
+    width: 5em;
+    margin-left: 17em;
+    display: block;
+}
+
+#whoiam, #message, #send 
 {
     padding: .5%;
 }
-#whoareyou, #whoiam {
+
+#whoiam {
     width: 10%;
     display: block;
     float: left;
     text-align: right;
 }
-#nickname, #message {
+#message {
     width: 78%;
 }
-#login, #send {
+#send {
     width: 10%;
 }
 
 #input_box { background: border: 1px #ccc solid; padding: 10px; width: 100%;}
-.message-item.msg{ background:#aaa; border-bottom: 1px #000 solid; padding: 3px;}
-.message-item.old{ background-color:#9999ff;}
-.message-item.new{ background-color:#99ff99;}
-.message-item.error{ background-color:#ff9999;}
+.message-item.system{ color: #666666;}
+.message-item.user{ color: #333333;}
+.message-item.error{ color: #FF0000;}
 .message-item {
   clear: both;
 }

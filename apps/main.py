@@ -102,21 +102,76 @@ class FeedHandler(JSONMessageHandler):
             self.add_to_payload('message','message sent')
 
         except ShieldException, se:
-            self.set_status('ERROR');
-            self.add_to_payload('message','VALIDATION ERROR: %s' % (se))
+            self.set_status(403, 'VALIDATION ERROR: %s' % (se));
+            self.headers = {'Content-Type': 'application/json'}
         return self.render()
 
 class LoginHandler(JSONMessageHandler):
     """Allows users to enter the chat room.  Does no authentication."""
 
-    def post(self):
-        nickname = self.get_argument('nickname')
-        users_online.append(nickname)
-        self.set_status(200)
-        msg = ChatMessage(timestamp=int(time.time()), nickname='system',
-            message='%s has entered the room.' % nickname, msgtype='system')
-        print repr(msg)
-        add_message(msg)
+    def post(self, nickname):        
+        if len(nickname) != 0:
+            try:
+                i = users_online.index(nickname)
+            except ValueError:
+                i = -1 # no match
+
+            if i  == -1 :
+                users_online.append(nickname)
+                msg = ChatMessage(timestamp=int(time.time()), nickname='system',
+                    message='%s has entered the room.' % nickname, msgtype='system')
+                print repr(msg)
+                add_message(msg)
+
+                ## respond to the client our success
+                self.set_status(200)
+                self.headers = {'Content-Type': 'application/json'}
+                self.add_to_payload('message',nickname + ' has entered the chat room')
+
+            else:
+                ## let the client know we failed because they didn't ask nice
+                self.set_status(403, 'identity theft is a serious crime')
+                self.headers = {'Content-Type': 'application/json'}
+
+        else:
+            ## let the client know we failed because they didn't ask nice
+            self.set_status(403, 'missing nickname argument')
+            self.headers = {'Content-Type': 'application/json'}
+
+        return self.render()
+
+    def delete(self, nickname):
+        """ remove a user from the chat session """
+        if len(nickname) != 0:
+            ## remove our user and alert others in the chat room
+            try:
+                i = users_online.index(nickname)
+            except ValueError:
+                i = -1 # no match
+
+            if i > -1:
+                users_online.pop(i)
+                msg = ChatMessage(timestamp=int(time.time()), nickname='system',
+                   message='%s has left the room.' % nickname, msgtype='system')
+                print repr(msg)
+                add_message(msg)
+
+                ## respond to the client our success
+                self.set_status(200)
+                self.set_status_message("ERROR")
+                self.headers = {'Content-Type': 'application/json'}
+                self.add_to_payload('message',nickname + ' has left the chat room')
+
+            else:
+                ## let the client know we failed because they didn't ask nice
+                self.set_status(403, nicknmame + ' is not in the room')
+                self.headers = {'Content-Type': 'application/json'}
+
+        else:
+            ## let the client know we failed because they didn't ask nice
+            self.set_status(403, 'missing nickname argument')
+            self.headers = {'Content-Type': 'application/json'}
+
         return self.render()
 
 
@@ -127,7 +182,7 @@ config = {
     'handler_tuples': [
         (r'^/$', ChatifyHandler),
         (r'^/feed$', FeedHandler),
-        (r'^/login$', LoginHandler),
+        (r'^/login/(?P<nickname>\w+)$', LoginHandler),
     ],
     'template_loader': load_jinja2_env(template_dir),
 }

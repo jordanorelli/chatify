@@ -7,7 +7,7 @@ function addmessages(messages, target_id, since_timestamp) {
       since_timestamp = m.timestamp;
     }
     date.setTime(m.timestamp * 1000);
-    timeFormatted = date.toString().split(' ')[4];
+    var timeFormatted = date.toString().split(' ')[4];
     $(target_id).append(
       '<div class="message-item ' + m.msgtype + '">' + 
       '<span class="message-nickname">' + m.nickname     + '</span>' + 
@@ -34,11 +34,11 @@ function waitForMsg(since_timestamp) {
       setTimeout('waitForMsg(' + since_timestamp + ')', 1000);
     },
     error: function(XMLHttpRequest, textStatus, errorThrown) {
-      since_timestamp = addmessages([{
+      addmessages([{
         timestamp: '',
-        nickname: 'error',
-        message: textStatus,
-        msgtype: 'error',
+        nickname: 'system',
+        message: errorThrown,
+        msgtype: textStatus
       }], '#messages', since_timestamp);
       setTimeout('waitForMsg(' + since_timestamp + ')', "15000");
     },
@@ -49,20 +49,54 @@ function login(nickname) {
   console.log("Logging in as " + nickname);
   $.ajax({
     type: "POST",
-    url: "/login",
+    url: "/login/" + nickname,
     async: true,
     cache: false,
     timeout: 30000,
-    data: 'nickname=' + nickname,
     success: function(data){
       $("#login-form").css("display", "none");
+      $("#messages").css("display", "block");
       $("#send-form").css("display", "block");   
       $("#whoiam").html($("#nickname").val() + " : ");
       $("#message").focus();
     },
-    error: function(data, errorText){
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      since_timestamp = addmessages([{
+        timestamp: '',
+        nickname: 'system',
+        message: errorThrown,
+        msgtype: textStatus
+      }], '#messages', 0);
+
       $("#nickname").removeAttr("disabled");
       $("#login").removeAttr("disabled");
+    }
+  });
+}
+
+function logout(nickname) {
+  console.log("Logging out " + nickname);
+  $.ajax({
+    type: "DELETE",
+    url: "/login/" + nickname,
+    async: true,
+    cache: false,
+    timeout: 30000,
+    success: function(data){
+      $("#send-form").css("display", "none");
+      $("#messages").css("display", "none");
+      $("#login-form").css("display", "block");
+      $("#whoiam").html("anonymous : ");
+      $("#nickname").focus();
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      addmessages([{
+        timestamp: '',
+        timestamp: '',
+        nickname: 'system',
+        message: errorThrown,
+        msgtype: textStatus
+      }], '#messages', 0);
     }
   });
 }
@@ -78,14 +112,28 @@ $(document).ready(function(){
 
   $nickField.focus();
 
-  $nickField.change(function(event){
+  $(window).unload(function(event){
+    logout($("#nickname").val().trim());
+  });
+
+  $nickField.keypress(function(event){
     var nickname = $(this).val().trim();
     if(nickname!=''){
-      $(this).attr("disabled", "disabled");
-      $("login").attr("disabled","disabled");
-      login(nickname);
+      $("#login").removeAttr("disabled");
+    } else {
+      $("#login").attr("disabled", "disabled");
     }
   });
+
+  $messageBox.keypress(function(event){
+    var message = $(this).val().trim();
+    if(message!=''){
+      $("#send").removeAttr("disabled");
+    } else {
+      $("#send").attr("disabled", "disabled");
+    }
+  });
+
 
   $loginButton.click( function(event){
     var nickname = $("#nickname").val().trim();
@@ -98,7 +146,7 @@ $(document).ready(function(){
     return false;
   });
   $sendButton.click(function(event){
-    $this = $(this);
+    var $this = $(this);
     if($("#message").val()!=''){
       var message = $("#message").val();
       var nickname = $('#nickname').val();
