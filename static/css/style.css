@@ -30,9 +30,6 @@ body {
     margin: 0;
 }
 
-
-
-
 #footer {
     font-size: 14pt;
     position: fixed;
@@ -53,6 +50,7 @@ body {
     width: 10%;
     display: block;
     float: left;
+    text-align: right;
 }
 #nickname, #message {
     width: 78%;
@@ -62,7 +60,25 @@ body {
 }
 
 #input_box { background: border: 1px #ccc solid; padding: 10px; width: 100%;}
-.msg{ background:#aaa; border-bottom: 1px #000 solid; padding: 3px;}
-.old{ background-color:#9999ff;}
-.new{ background-color:#99ff99;}
-.error{ background-color:#ff9999;}
+.message-item.msg{ background:#aaa; border-bottom: 1px #000 solid; padding: 3px;}
+.message-item.old{ background-color:#9999ff;}
+.message-item.new{ background-color:#99ff99;}
+.message-item.error{ background-color:#ff9999;}
+.message-item span {
+  padding: 2px .5%;
+  display: block;
+  float: left;
+}
+.message-nickname {
+  font-weight: bold;
+  width: 10%;
+  text-align: right
+}
+.message-text {
+    width: 77%;
+}
+.message-time {
+  width: 10%;
+  color: #c7c7c7;
+  text-align: center;
+}

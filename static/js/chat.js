@@ -1,12 +1,19 @@
 function addmessages(messages, target_id, since_timestamp) {
+  var date = new Date();
+
   for (var i = 0; i < messages.length; i++) {
     var m = messages[i];
     if (m.timestamp > since_timestamp) {
       since_timestamp = m.timestamp;
     }
+    date.setTime(m.timestamp * 1000);
+    timeFormatted = date.toString().split(' ')[4];
     $(target_id).append(
-      "<div class='messages "+ m.msgtype +"'>"+  m.nickname + ": " +
-        m.message +"</div>"
+      '<div class="message-item ' + m.msgtype + '">' + 
+      '<span class="message-nickname">' + m.nickname     + '</span>' + 
+      '<span class="message-text">'     + m.message      + '</span>' +
+      '<span class="message-time">'     + timeFormatted  + '</span>' +
+      '</div>'
     );
     $(document).scrollTop($(document).height()+500);      
   }
@@ -29,12 +36,11 @@ function waitForMsg(since_timestamp) {
     error: function(XMLHttpRequest, textStatus, errorThrown) {
       since_timestamp = addmessages([{
         timestamp: '',
-        nickname: errorThrown,
-        messagr: textStatus,
+        nickname: 'error',
+        message: textStatus,
         msgtype: 'error',
       }], '#messages', since_timestamp);
       setTimeout('waitForMsg(' + since_timestamp + ')', "15000");
-      alert("OH FUCK");
     },
   });
 };
@@ -63,17 +69,17 @@ function login(nickname) {
 
 $(document).ready(function(){
   var since_timestamp = 0;
-  var $nickField = $('#nickname');
-  var $messageBox = $('#message');
-  var $loginForm = $('#login-form');
-  var $sendForm = $('#send-form');
-  var $loginButton = $('#login');
-  var $sendButton = $('#send');
+  var $nickField   = $("#nickname"  );
+  var $messageBox  = $("#message"   );
+  var $loginForm   = $("#login-form");
+  var $sendForm    = $("#send-form" );
+  var $loginButton = $("#login"     );
+  var $sendButton  = $("#send"      );
 
   $nickField.focus();
 
   $nickField.change(function(event){
-    var nickname = $(this).val();
+    var nickname = $(this).val().trim();
     if(nickname!=''){
       $(this).attr("disabled", "disabled");
       $("login").attr("disabled","disabled");
@@ -82,37 +88,40 @@ $(document).ready(function(){
   });
 
   $loginButton.click( function(event){
-    var nickname = $("nickname").val();
+    var nickname = $("#nickname").val().trim();
     if(nickname!=''){
-        $("nickname").attr("disabled", "disabled");
+        $("#nickname").attr("disabled", "disabled");
         $(this).attr("disabled", "disabled");
         login(nickname);
     }
+    event.stopPropagation();
+    return false;
   });
   $sendButton.click(function(event){
     $this = $(this);
-    if($messageBox.val()!=''){
-      var message = $messageBox.val();
+    if($("#message").val()!=''){
+      var message = $("#message").val();
       var nickname = $('#nickname').val();
-      // disable changing our name
-      $this.attr("disabled", "disabled");
-      // enable sending new messages
-      $messageBox.attr("disabled","disabled");
+      // disable sending twice
+      $(this).attr("disabled", "disabled");
+      $("#message").attr("disabled","disabled");
       $.ajax({
         type: 'POST',
         url: '/feed',
         data: 'nickname=' + nickname + '&message=' + message,
         success: function(){
           console.log("Hit send success block.");
-          $messageBox.val("")
+          $("#message").val("")
         },
         error: function(){ alert("unable to send message!");},
         complete: function(){
-          $messageBox.removeAttr("disabled");
-          $('#send').removeAttr("disabled");
+          $("#message").removeAttr("disabled");
+          $("#send"   ).removeAttr("disabled");
         }
       });
     }
+    event.stopPropagation();
+    return false;
   });
 
   waitForMsg(since_timestamp);
