@@ -64,6 +64,9 @@ body {
 .message-item.old{ background-color:#9999ff;}
 .message-item.new{ background-color:#99ff99;}
 .message-item.error{ background-color:#ff9999;}
+.message-item {
+  clear: both;
+}
 .message-item span {
   padding: 2px .5%;
   display: block;
