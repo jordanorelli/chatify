@@ -53,36 +53,39 @@ class ChatMessage(EmbeddedDocument):
         super(ChatMessage, self).__init__(*args, **kwargs)
         self.timestamp = int(time.time())
 
-class ChatifyHandler(WebMessageHandler, Jinja2Rendering):
+class ChatifyHandler(Jinja2Rendering):
     """Renders the chat interface template."""
 
     def get(self):
         # just start us up, it's all in the AJAX
         return self.render_template('base.html')
 
-
 class FeedHandler(JSONMessageHandler):
     """Handles poll requests from user; sends out queued messages."""
+
+    def prepare(self):
+        self.headers = {'Content-Type': 'application/json'}
 
     def get(self):
         try:
             messages = get_messages(int(self.get_argument('since_timestamp', 0)))
+
         except ValueError as e:
-            print str(e)
             messages = get_messages()
 
         if len(messages)==0:
             new_message_event.wait(POLL_INTERVAL)
         
         self.set_status(200)
-        self.headers= {'Content-Type': 'application/json'}
         self.add_to_payload('messages', messages)
+
         return self.render()
 
     def post(self):
         nickname = self.get_argument('nickname')
         message = self.get_argument('message')
         chat_message = ChatMessage(**{'nickname': nickname, 'message': message})
+
         try:
             chat_message.validate()
             add_message(chat_message)
@@ -95,16 +98,21 @@ class FeedHandler(JSONMessageHandler):
 
         except ShieldException, se:
             self.set_status(403, 'VALIDATION ERROR: %s' % (se));
-            self.headers = {'Content-Type': 'application/json'}
+
         return self.render()
 
 class LoginHandler(JSONMessageHandler):
     """Allows users to enter the chat room.  Does no authentication."""
 
+    def prepare(self):
+        self.headers = {'Content-Type': 'application/json'}
+
     def post(self, nickname):        
         if len(nickname) != 0:
+
             try:
                 i = users_online.index(nickname)
+
             except ValueError:
                 i = -1 # no match
 
@@ -116,27 +124,26 @@ class LoginHandler(JSONMessageHandler):
 
                 ## respond to the client our success
                 self.set_status(200)
-                self.headers = {'Content-Type': 'application/json'}
                 self.add_to_payload('message',nickname + ' has entered the chat room')
 
             else:
                 ## let the client know we failed because they didn't ask nice
                 self.set_status(403, 'identity theft is a serious crime')
-                self.headers = {'Content-Type': 'application/json'}
 
         else:
             ## let the client know we failed because they didn't ask nice
             self.set_status(403, 'missing nickname argument')
-            self.headers = {'Content-Type': 'application/json'}
 
         return self.render()
 
     def delete(self, nickname):
         """ remove a user from the chat session """
         if len(nickname) != 0:
+
             ## remove our user and alert others in the chat room
             try:
                 i = users_online.index(nickname)
+
             except ValueError:
                 i = -1 # no match
 
@@ -148,25 +155,22 @@ class LoginHandler(JSONMessageHandler):
 
                 ## respond to the client our success
                 self.set_status(200)
-                self.set_status_message("ERROR")
-                self.headers = {'Content-Type': 'application/json'}
                 self.add_to_payload('message',nickname + ' has left the chat room')
 
             else:
                 ## let the client know we failed because they didn't ask nice
                 self.set_status(403, nicknmame + ' is not in the room')
-                self.headers = {'Content-Type': 'application/json'}
 
         else:
             ## let the client know we failed because they didn't ask nice
             self.set_status(403, 'missing nickname argument')
-            self.headers = {'Content-Type': 'application/json'}
 
         return self.render()
 
 
 project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 template_dir = os.path.join(project_dir, 'templates')
+
 config = {
     'mongrel2_pair': ('ipc://run/mongrel2_send', 'ipc://run/mongrel2_recv'),
     'handler_tuples': [
