@@ -38,9 +38,7 @@ def get_messages(since_timestamp=0):
     """get new messages since a certain timestamp"""
     messages = filter(lambda x: x.timestamp > since_timestamp,
                       chat_messages)
-    print "messages since %f: %r" % (since_timestamp,
-                                     [(repr(m), m.timestamp)
-                                      for m in messages])
+
     return messages
 
 class ChatMessage(EmbeddedDocument):
@@ -54,18 +52,12 @@ class ChatMessage(EmbeddedDocument):
     def __init__(self, *args, **kwargs):
         super(ChatMessage, self).__init__(*args, **kwargs)
         self.timestamp = int(time.time())
-        print "%f: %s: %s" % (self.timestamp, self.nickname, self.message)
-
-    def __repr__(self):
-        return '<ChatMessage: %s>' % self.message
-
 
 class ChatifyHandler(WebMessageHandler, Jinja2Rendering):
     """Renders the chat interface template."""
 
     def get(self):
         # just start us up, it's all in the AJAX
-        # self.set_body('Take five, %s!' % name)
         return self.render_template('base.html')
 
 
@@ -120,7 +112,6 @@ class LoginHandler(JSONMessageHandler):
                 users_online.append(nickname)
                 msg = ChatMessage(timestamp=int(time.time()), nickname='system',
                     message='%s has entered the room.' % nickname, msgtype='system')
-                print repr(msg)
                 add_message(msg)
 
                 ## respond to the client our success
@@ -153,7 +144,6 @@ class LoginHandler(JSONMessageHandler):
                 users_online.pop(i)
                 msg = ChatMessage(timestamp=int(time.time()), nickname='system',
                    message='%s has left the room.' % nickname, msgtype='system')
-                print repr(msg)
                 add_message(msg)
 
                 ## respond to the client our success
