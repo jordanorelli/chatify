@@ -10,14 +10,20 @@ function addmessages(messages, target_id, since_timestamp) {
     var timeFormatted = date.toString().split(' ')[4];
     $(target_id).append(
       '<div class="message-item ' + m.msgtype + '">' +
-      '<span class="message-nickname">' + m.nickname     + '</span>' +
-      '<span class="message-text">'     + m.message      + '</span>' +
+      '<span class="message-nickname">' + sanitize(m.nickname)     + '</span>' +
+      '<span class="message-text">'     + sanitize(m.message)      + '</span>' +
       '<span class="message-time">'     + timeFormatted  + '</span>' +
       '</div>'
     );
     $(document).scrollTop($(document).height()+500);
   }
   return since_timestamp;
+}
+
+function sanitize(text) {
+    return text.replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;");
 }
 
 function waitForMsg(since_timestamp) {
@@ -49,7 +55,7 @@ function login(nickname) {
   console.log("Logging in as " + nickname);
   $.ajax({
     type: "POST",
-    url: "/login/" + nickname,
+    url: "/login/" + escape(nickname),
     async: true,
     cache: false,
     timeout: 30000,
@@ -57,7 +63,7 @@ function login(nickname) {
       $("#login-form").css("display", "none");
       $("#messages").css("display", "block");
       $("#send-form").css("display", "block");   
-      $("#whoiam").html($("#nickname").val() + " : ");
+      $("#whoiam").html(sanitize($("#nickname").val()) + " : ");
       $("#message").focus();
     },
     error: function(XMLHttpRequest, textStatus, errorThrown) {
@@ -78,7 +84,7 @@ function logout(nickname) {
   console.log("Logging out " + nickname);
   $.ajax({
     type: "DELETE",
-    url: "/login/" + nickname,
+    url: "/login/" + escape(nickname),
     async: true,
     cache: false,
     timeout: 30000,
@@ -156,7 +162,7 @@ $(document).ready(function(){
       $.ajax({
         type: 'POST',
         url: '/feed',
-        data: 'nickname=' + nickname + '&message=' + message,
+        data: 'nickname=' + escape(nickname) + '&message=' + escape(message),
         success: function(){
           console.log("Hit send success block.");
           $("#message").val("")
