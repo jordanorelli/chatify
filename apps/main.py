@@ -5,6 +5,7 @@ from dictshield import fields
 from dictshield.document import Document
 from dictshield.fields import EmbeddedDocument, ShieldException
 from gevent.event import Event
+from urllib import unquote
 import os
 import time
 
@@ -167,7 +168,7 @@ class LoginHandler(JSONMessageHandler):
             if user == None :
                 user=add_user(User(nickname=nickname), users_online)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
-                    message='%s has entered the room.' % nickname, msgtype='system')
+                    message="%s has entered the room" % unquote(nickname), msgtype='system')
                 add_message(msg, chat_messages)
 
                 ## respond to the client our success
@@ -229,7 +230,7 @@ config = {
     'handler_tuples': [
         (r'^/$', ChatifyHandler),
         (r'^/feed$', FeedHandler),
-        (r'^/login/(?P<nickname>\w+)$', LoginHandler),
+        (r'^/login/(?P<nickname>.+)$', LoginHandler),
     ],
     'cookie_secret': '1a^O9s$4clq#09AlOO1!',
     'template_loader': load_jinja2_env(template_dir),

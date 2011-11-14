@@ -78,18 +78,18 @@ body {
     margin-left: 2em;
 }
 
-#login {
+#login-button {
     width: 5em;
     margin-left: 17em;
     display: block;
 }
 
-#whoiam, #message, #send 
+#current-username, #message, #send-button 
 {
     padding: .5%;
 }
 
-#whoiam {
+#current-username {
     width: 10%;
     display: block;
     float: left;
@@ -98,7 +98,7 @@ body {
 #message {
     width: 78%;
 }
-#send {
+#send-button {
     width: 10%;
 }
 

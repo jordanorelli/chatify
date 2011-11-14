@@ -21,8 +21,8 @@
           loginContainer: "#login-container",
           loginErrors: "#login-errors",
           usernameField: "#nickname",
-          usernameDisplay: "#whoiam",
-          sendMessageButton: "#send",
+          usernameDisplay: "#current-username",
+          sendMessageButton: "#send-button",
           composeMessageField: "#message",
           messageTemplate: $("#message-template").html()
         });
@@ -55,9 +55,9 @@
         <div id="footer">
           <div id="send-form">
             <form name="send" action="javascript:Chat.doNothing();">
-              <label id="whoiam" for="message">anonymous:</label>
+              <label id="current-username" for="message">anonymous:</label>
               <input id="message" type="text" />
-              <input id="send" type="submit" name="send" value="send"
+              <input id="send-button" type="submit" name="send" value="send"
                 disabled="disabled" />
             </form>
           </div>
