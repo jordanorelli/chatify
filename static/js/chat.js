@@ -14,10 +14,14 @@ var Chat = (function($) {
   var pollInterval = 30000;
   var lastMessageTimestamp = 0;
 
-  var sanitize = function (text) {
+  var sanitize = function(text) {
     return text.replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+  }
+
+  var scrollToEnd = function() {
+    $(document).scrollTop($(document).height() + 500);
   }
 
   var login = function() {
@@ -35,7 +39,6 @@ var Chat = (function($) {
         $loginErrors.hide();
         $chatElements.show();
         poll();
-        // pollID = setInterval(poll, pollInterval);
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
         console.log(errorThrown);
@@ -46,12 +49,12 @@ var Chat = (function($) {
   };
 
   var displayMessages = function(messages) {
-
     $(messages).each(function(){
       $messageContainer.append(renderMessage(this));
       if(this.timestamp > lastMessageTimestamp)
         lastMessageTimestamp = this.timestamp;
     });
+    scrollToEnd();
   };
 
   var renderMessage = function(message) {
@@ -71,6 +74,8 @@ var Chat = (function($) {
     var $this = $(this);
     var message = $composeMessageField.val();
     $this.attr("disabled", "disabled");
+    $composeMessageField.blur();
+    $composeMessageField.attr("disabled", "disabled");
 
     console.log("Attempting to send message: " + message);
     $.ajax({
@@ -86,6 +91,7 @@ var Chat = (function($) {
       },
       complete: function(){
         $composeMessageField.removeAttr("disabled");
+        $composeMessageField.focus();
         $this.removeAttr("disabled");
       }
     });
@@ -153,8 +159,13 @@ var Chat = (function($) {
 
   };
 
+  var doNothing = function() {
+    return false;
+  };
+
   return {
-    buildChatWindow: buildChatWindow
+    buildChatWindow: buildChatWindow,
+    doNothing: doNothing
   };
 })($);
 

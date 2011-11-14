@@ -70,7 +70,7 @@ class User(Document):
 
     def __init__(self, *args, **kwargs):
         super(User, self).__init__(*args, **kwargs)
-        self.timestamp = int(time.time())
+        self.timestamp = int(time.time() * 1000)
 
 class ChatMessage(EmbeddedDocument):
     """A single message"""
@@ -82,7 +82,7 @@ class ChatMessage(EmbeddedDocument):
 
     def __init__(self, *args, **kwargs):
         super(ChatMessage, self).__init__(*args, **kwargs)
-        self.timestamp = int(time.time())
+        self.timestamp = int(time.time() * 1000)
 
 class ChatifyHandler(Jinja2Rendering):
     """Renders the chat interface template."""
@@ -166,7 +166,7 @@ class LoginHandler(JSONMessageHandler):
             user = find_list_item_by_nickname(nickname, users_online)
             if user == None :
                 user=add_user(User(nickname=nickname), users_online)
-                msg = ChatMessage(timestamp=int(time.time()), nickname='system',
+                msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
                     message='%s has entered the room.' % nickname, msgtype='system')
                 add_message(msg, chat_messages)
 
@@ -195,7 +195,7 @@ class LoginHandler(JSONMessageHandler):
 
             if user != None:
                 remove_user(user, users_online_list)
-                msg = ChatMessage(timestamp=int(time.time()), nickname='system',
+                msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
                    message='%s has left the room.' % nickname, msgtype='system')
                 add_message(msg, chat_messages)
 
