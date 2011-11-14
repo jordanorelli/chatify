@@ -4,6 +4,7 @@
     <link rel=stylesheet href="static/css/style.css" />
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js" type="text/javascript" charset="utf-8"></script>
     <script src="static/js/chat.js"></script>
+    <script>{{ auto_login_flag }}</script>
 </head>
 <body>
   <div id="header">
@@ -16,9 +17,9 @@
           Leveraging the power of Python and Gevent make building a scalable chat server simple and fun.
           Check out the source code <a href="http://github.com/jordanorelli/chatify">here</a>.
           </p>
-          <form name="login" action="">
+          <form name="login" action="javascript:donothing();">
               <label id="whoareyou" for="nickname">Who are you?</label>
-              <input id="nickname" type="text" />
+              <input id="nickname" type="text" value="{{ nickname }}"/>
               <input id="login" type="submit" name="join" value="join" disabled="disabled"/>
           </form>
       </div>
@@ -27,7 +28,7 @@
   </div>
   <div id="footer">
       <div id="send-form" style="display: none;">
-        <form name="send" action="javascript:function(){return false;}">
+        <form name="send" action="javascript:donothing()">
               <label id="whoiam" for="message">anonymous:</label>
               <input id="message" type="text" />
               <input id="send" type="submit" name="send" value="send" disabled="disabled"/>
