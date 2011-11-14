@@ -12,6 +12,7 @@ var Chat = (function($) {
   var username;
   var pollID;
   var pollInterval = 30000;
+  var lastMessageTimestamp = 0;
 
   var sanitize = function (text) {
     return text.replace(/&/g, "&amp;")
@@ -34,7 +35,7 @@ var Chat = (function($) {
         $loginErrors.hide();
         $chatElements.show();
         poll();
-        pollID = setInterval(poll, pollInterval);
+        // pollID = setInterval(poll, pollInterval);
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
         console.log(errorThrown);
@@ -45,8 +46,11 @@ var Chat = (function($) {
   };
 
   var displayMessages = function(messages) {
+
     $(messages).each(function(){
       $messageContainer.append(renderMessage(this));
+      if(this.timestamp > lastMessageTimestamp)
+        lastMessageTimestamp = this.timestamp;
     });
   };
 
@@ -62,18 +66,6 @@ var Chat = (function($) {
       $submitButton.attr("disabled", "disabled");
     }
   };
-
-//   $sendButton.click(function(event){
-//     if($messageBox.val().trim()!=''){
-//       var message = $messageBox.val();
-//       var nickname = $nickField.val().trim();
-//       // disable sending twice
-//       $(this).attr("disabled", "disabled");
-//       $messageBox.attr("disabled","disabled");
-//       $.ajax({
-//     event.stopPropagation();
-//     return false;
-//   });
 
   var sendMessageClick = function(event) {
     var $this = $(this);
@@ -111,14 +103,12 @@ var Chat = (function($) {
       cache: false,
       timeout: pollInterval,
       // data: 'since_timestamp=' + since_timestamp,
-      data: 'since_timestamp=' + 0,
+      data: 'since_timestamp=' + lastMessageTimestamp,
       success: function(data) {
         displayMessages(data.messages);
         // since_timestamp = displayMessages(data.messages, '#messages', since_timestamp);
         console.log("getMessages success block hit.");
-        // setTimeout(function() {
-        //   getMessages(since_timestamp);
-        // }, 1000);
+        poll();
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
         displayMessages([{
@@ -127,9 +117,7 @@ var Chat = (function($) {
           message: errorThrown,
           msgtype: textStatus
         }], '#messages', since_timestamp);
-        setTimeout(function() {
-          getMessages(since_timestamp);
-        }, 15000);
+        poll();
       }
     });
   };

@@ -2,6 +2,7 @@
 from brubeck.request_handling import Brubeck, JSONMessageHandler
 from brubeck.templating import load_jinja2_env, Jinja2Rendering
 from dictshield import fields
+from dictshield.document import Document
 from dictshield.fields import EmbeddedDocument, ShieldException
 from gevent.event import Event
 import os
@@ -63,10 +64,10 @@ def check_users_online(users_list, chat_messages_list, since_timestamp=(time.tim
         remove_user(user, users_online)
 
 class User(Document):
-    """a chat user"""    
-    timestamp = IntField(required=True)
-    nickname = StringField(required=True, max_length=40)
-    
+    """a chat user"""
+    timestamp = fields.IntField(required=True)
+    nickname = fields.StringField(required=True, max_length=40)
+
     def __init__(self, *args, **kwargs):
         super(User, self).__init__(*args, **kwargs)
         self.timestamp = int(time.time())
@@ -114,10 +115,12 @@ class FeedHandler(JSONMessageHandler):
             messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
 
         except ValueError as e:
+            print "failed to get message"
             messages = get_messages(chat_messages)
 
         if len(messages)==0:
             new_message_event.wait(POLL_INTERVAL)
+            print "waking up"
             try:
                 messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
     
@@ -136,7 +139,7 @@ class FeedHandler(JSONMessageHandler):
     def post(self):
         nickname = self.get_argument('nickname')
         message = self.get_argument('message')
-        print message
+        print "%s: %s" % (nickname, message)
         chat_message = ChatMessage(**{'nickname': nickname, 'message': message})
 
         try:
