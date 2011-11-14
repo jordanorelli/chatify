@@ -19,10 +19,6 @@ body {
 #content {
     margin-top: 48px;
 }
-
-
-
-
 #intro {
     width: 20em;
     line-height: 1.5em;
@@ -49,6 +45,7 @@ body {
     width: 100%;
     margin: 0;
     padding: 0;
+    border-top: 1px solid black;
     background: #fff;
     z-index: 99;
 }
@@ -84,8 +81,7 @@ body {
     display: block;
 }
 
-#current-username, #message, #send-button 
-{
+#current-username, #message, #send-button {
     padding: .5%;
 }
 
@@ -97,6 +93,8 @@ body {
 }
 #message {
     width: 78%;
+    resize: none;
+    height: 4em;
 }
 #send-button {
     width: 10%;
@@ -110,7 +108,7 @@ body {
 
 #message-container {
     margin: 0;
-    padding: 0 0 4em 0;
+    padding: 0 0 6em 0;
     overflow: hidden;
 }
 

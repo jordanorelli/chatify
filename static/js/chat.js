@@ -1,6 +1,7 @@
 var Chat = (function($) {
-  var $chatElements;
+  var $chatContainer;
   var $messageContainer;
+  var $inputContainer;
   var $loginButton;
   var $loginContainer;
   var $loginErrors;
@@ -38,7 +39,7 @@ var Chat = (function($) {
         $usernameDisplay.html(username);
         $loginContainer.hide();
         $loginErrors.hide();
-        $chatElements.show();
+        $chatContainer.show();
         poll();
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
@@ -130,8 +131,9 @@ var Chat = (function($) {
   };
 
   var buildChatWindow = function(config) {
-    $chatElements = $(config.chatElements);
+    $chatContainer = $(config.chatContainer);
     $messageContainer = $(config.messageContainer);
+    $inputContainer = $(config.inputContainer);
     $loginButton = $(config.loginButton);
     $loginContainer = $(config.loginContainer);
     $loginErrors = $(config.loginErrors);
@@ -146,18 +148,26 @@ var Chat = (function($) {
       event.preventDefault();
     });
 
-    $composeMessageField.keyup(function(event){
+    $composeMessageField.keyup(function(event) {
       setButtonBehavior($(this), $sendMessageButton);
     });
 
-    $usernameField.keyup(function(event){
+    $composeMessageField.keydown(function(event) {
+      switch(event.keyCode) {
+        case 13: // enter
+          if(!event.shiftKey)
+            $sendMessageButton.click();
+          break;
+      }
+    });
+
+    $usernameField.keyup(function(event) {
       setButtonBehavior($(this), $loginButton);
     });
 
-    $sendMessageButton.click(function(event){
+    $sendMessageButton.click(function(event) {
       sendMessageClick(event);
     });
-
   };
 
   var doNothing = function() {
