@@ -2,7 +2,7 @@
 * @messages - an array of messages.
 * @target_id - DOM ID of the element that we will inject the message element into
 */
-function addmessages(messages, target_id, since_timestamp) {
+function displayMessages(messages, target_id, since_timestamp) {
   for (var i = 0; i < messages.length; i++) {
     var m = messages[i];
     if (m.timestamp > since_timestamp) {
@@ -32,36 +32,30 @@ function sanitize(text) {
                .replace(/>/g, "&gt;");
 }
 
-
-function waitForMsg(since_timestamp) {
-    "use strict";
-    $.ajax({
-        type: "GET",
-        url: "/feed",
-        async: true,
-        cache: false,
-        timeout: 50000,
-        data: 'since_timestamp=' + since_timestamp,
-        success: function (data) {
-            since_timestamp = addmessages(data.messages,
-                '#messages', since_timestamp);
-            console.log("waitForMsg success block hit.");
-            setTimeout('waitForMsg(' + since_timestamp + ')',
-                1000);
-        },
-        error: function (XMLHttpRequest, textStatus, errorThrown) {
-            addmessages([{
-                timestamp: '',
-                nickname: 'system',
-                message: errorThrown,
-                msgtype: textStatus
-            }], '#messages', since_timestamp);
-            setTimeout('waitForMsg(' + since_timestamp + ')',
-                15000);
-        }
-    });
-}
-
+function getMessages(since_timestamp) {
+  $.ajax({
+    type: "GET",
+    url: "/feed",
+    async: true,
+    cache: false,
+    timeout:50000,
+    data: 'since_timestamp=' + since_timestamp,
+    success: function(data) {
+      since_timestamp = displayMessages(data.messages, '#messages', since_timestamp);
+      console.log("getMessages success block hit.");
+      setTimeout('getMessages(' + since_timestamp + ')', 1000);
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      displayMessages([{
+        timestamp: '',
+        nickname: 'system',
+        message: errorThrown,
+        msgtype: textStatus
+      }], '#messages', since_timestamp);
+      setTimeout('getMessages(' + since_timestamp + ')', "15000");
+    },
+  });
+};
 
 function login(nickname) {
   console.log("Logging in as " + nickname);
@@ -79,7 +73,7 @@ function login(nickname) {
       $("#message").focus();
     },
     error: function(XMLHttpRequest, textStatus, errorThrown) {
-      since_timestamp = addmessages([{
+      since_timestamp = displayMessages([{
         timestamp: '',
         nickname: 'system',
         message: errorThrown,
@@ -94,37 +88,69 @@ function login(nickname) {
 
 
 function logout(nickname) {
-    "use strict";
-    console.log("Logging out " + nickname);
-    $.ajax({
-        type: "DELETE",
-        url: "/login/" + escape(nickname),
-        async: true,
-        cache: false,
-        timeout: 30000,
-        success: function (data) {
-            $("#send-form").css("display", "none");
-            $("#messages").css("display", "none");
-            $("#login-form").css("display", "block");
-            $("#whoiam").html("anonymous : ");
-            $("#nickname").focus();
-        },
-        error: function (XMLHttpRequest, textStatus, errorThrown) {
-            addmessages([{
-                timestamp: '',
-                nickname: 'system',
-                message: errorThrown,
-                msgtype: textStatus
-            }], '#messages', 0);
-        }
-    });
+  console.log("Logging out " + nickname);
+  $.ajax({
+    type: "DELETE",
+    url: "/login/" + escape(nickname),
+    async: true,
+    cache: false,
+    timeout: 30000,
+    success: function(data){
+      $("#send-form").css("display", "none");
+      $("#messages").css("display", "none");
+      $("#login-form").css("display", "block");
+      $("#whoiam").html("anonymous : ");
+      $("#nickname").focus();
+    },
+    error: function(XMLHttpRequest, textStatus, errorThrown) {
+      displayMessages([{
+        timestamp: '',
+        timestamp: '',
+        nickname: 'system',
+        message: errorThrown,
+        msgtype: textStatus
+      }], '#messages', 0);
+    }
+  });
 }
 
+$(document).ready(function(){
+  var since_timestamp = 0;
+  var $nickField   = $("#nickname"  );
+  var $messageBox  = $("#message"   );
+  var $loginForm   = $("#login-form");
+  var $sendForm    = $("#send-form" );
+  var $loginButton = $("#login"     );
+  var $sendButton  = $("#send"      );
 
-  $loginButton.click( function(event){
-    var nickname = $("#nickname").val().trim();
+  $nickField.focus();
+
+  $(window).unload(function(event){
+    logout($nickField.val().trim());
+  });
+
+  $nickField.keypress(function(event){
+    var nickname = $(this).val().trim();
     if(nickname!=''){
-        $("#nickname").attr("disabled", "disabled");
+      $loginButton.removeAttr("disabled");
+    } else {
+      $loginButton.attr("disabled", "disabled");
+    }
+  });
+
+  $messageBox.keypress(function(event){
+    var message = $(this).val().trim();
+    if(message!=''){
+      $sendButton.removeAttr("disabled");
+    } else {
+      $sendButton.attr("disabled", "disabled");
+    }
+  });
+
+  $loginButton.click(function(event){
+    var nickname = $nickField.val().trim();
+    if(nickname!=''){
+        $nickField.attr("disabled", "disabled");
         $(this).attr("disabled", "disabled");
         login(nickname);
     }
@@ -133,25 +159,24 @@ function logout(nickname) {
   });
 
   $sendButton.click(function(event){
-    var $this = $(this);
-    if($("#message").val().trim()!=''){
-      var message = $("#message").val();
-      var nickname = $('#nickname').val();
+    if($messageBox.val().trim()!=''){
+      var message = $messageBox.val();
+      var nickname = $nickField.val().trim();
       // disable sending twice
       $(this).attr("disabled", "disabled");
-      $("#message").attr("disabled","disabled");
+      $messageBox.attr("disabled","disabled");
       $.ajax({
         type: 'POST',
         url: '/feed',
         data: 'nickname=' + escape(nickname) + '&message=' + escape(message),
         success: function(){
           console.log("Hit send success block.");
-          $("#message").val("")
+          $messageBox.val("")
         },
         error: function(){ alert("unable to send message!");},
         complete: function(){
-          $("#message").removeAttr("disabled");
-          $("#send"   ).removeAttr("disabled");
+          $messageBox.removeAttr("disabled");
+          $(this).removeAttr("disabled");
         }
     });
 
@@ -209,5 +234,5 @@ function logout(nickname) {
     //    login($("nickname").val());
     //}
 
-    waitForMsg(since_timestamp);
+  getMessages(since_timestamp);
 });
