@@ -25,10 +25,8 @@ def add_message(chat_message):
 
 def get_messages(since_timestamp=0):
     """get new messages since a certain timestamp"""
-    messages = filter(lambda x: x.timestamp > since_timestamp,
-                      chat_messages)
-
-    return messages
+    return filter(lambda x: x.timestamp > since_timestamp,
+                  chat_messages)
 
 class ChatMessage(EmbeddedDocument):
     """A single message"""
@@ -46,7 +44,6 @@ class ChatifyHandler(Jinja2Rendering):
     """Renders the chat interface template."""
 
     def get(self):
-        # just start us up, it's all in the AJAX
         return self.render_template('base.html')
 
 
@@ -62,7 +59,7 @@ class FeedHandler(JSONMessageHandler):
 
         if len(messages)==0:
             new_message_event.wait(POLL_INTERVAL)
-        
+
         self.set_status(200)
         self.headers= {'Content-Type': 'application/json'}
         self.add_to_payload('messages', messages)
@@ -90,7 +87,7 @@ class FeedHandler(JSONMessageHandler):
 class LoginHandler(JSONMessageHandler):
     """Allows users to enter the chat room.  Does no authentication."""
 
-    def post(self, nickname):        
+    def post(self, nickname):
         if len(nickname) != 0:
             try:
                 i = users_online.index(nickname)

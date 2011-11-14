@@ -1,23 +1,29 @@
+/* Adds messages to the chat log.
+* @messages - an array of messages.
+* @target_id - DOM ID of the element that we will inject the message element into
+*/
 function addmessages(messages, target_id, since_timestamp) {
-  var date = new Date();
-
   for (var i = 0; i < messages.length; i++) {
     var m = messages[i];
     if (m.timestamp > since_timestamp) {
       since_timestamp = m.timestamp;
     }
-    date.setTime(m.timestamp * 1000);
-    var timeFormatted = date.toString().split(' ')[4];
-    $(target_id).append(
-      '<div class="message-item ' + m.msgtype + '">' +
-      '<span class="message-nickname">' + sanitize(m.nickname)     + '</span>' +
-      '<span class="message-text">'     + sanitize(m.message)      + '</span>' +
-      '<span class="message-time">'     + timeFormatted  + '</span>' +
-      '</div>'
-    );
+    $(target_id).append(renderMessage(m));
     $(document).scrollTop($(document).height()+500);
   }
   return since_timestamp;
+}
+
+/* given a message object, returns a string representation of the message. */
+function renderMessage(message) {
+  var date = new Date();
+  date.setTime(message.timestamp * 1000);
+  var timeFormatted = date.toString().split(' ')[4];
+  return '<div class="message-item ' + message.msgtype + '">' +
+    '<span class="message-nickname">' + sanitize(message.nickname)     + '</span>' +
+    '<span class="message-text">'     + sanitize(message.message)      + '</span>' +
+    '<span class="message-time">'     + timeFormatted  + '</span>' +
+    '</div>';
 }
 
 function sanitize(text) {
@@ -62,7 +68,7 @@ function login(nickname) {
     success: function(data){
       $("#login-form").css("display", "none");
       $("#messages").css("display", "block");
-      $("#send-form").css("display", "block");   
+      $("#send-form").css("display", "block");
       $("#whoiam").html(sanitize($("#nickname").val()) + " : ");
       $("#message").focus();
     },
@@ -140,7 +146,6 @@ $(document).ready(function(){
     }
   });
 
-
   $loginButton.click( function(event){
     var nickname = $("#nickname").val().trim();
     if(nickname!=''){
@@ -151,6 +156,7 @@ $(document).ready(function(){
     event.stopPropagation();
     return false;
   });
+
   $sendButton.click(function(event){
     var $this = $(this);
     if($("#message").val().trim()!=''){
