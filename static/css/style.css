@@ -19,10 +19,10 @@ body {
 #content {
     margin-top: 48px;
 }
-#messages {
-    padding-bottom: 4em;
-    overflow: hidden;
-}
+
+
+
+
 #intro {
     width: 20em;
     line-height: 1.5em;
@@ -103,26 +103,45 @@ body {
 }
 
 #input_box { background: border: 1px #ccc solid; padding: 10px; width: 100%;}
-.message-item.system{ color: #666666;}
-.message-item.user{ color: #333333;}
-.message-item.error{ color: #FF0000;}
-.message-item {
-  clear: both;
+
+/*------------------------------------------------------------------------------
+ * message formatting
+ *----------------------------------------------------------------------------*/
+
+#message-container {
+    margin: 0;
+    padding: 0 0 4em 0;
+    overflow: hidden;
 }
-.message-item span {
+
+#message-container li {
+  clear: both;
+  list-style: none;
+}
+#message-container li.system {
+  color: #666666;
+}
+#message-container li.user {
+  color: #333333;
+}
+#message-container li.error {
+  color: #FF0000;
+}
+
+#message-container span {
   padding: 2px .5%;
   display: block;
   float: left;
 }
-.message-nickname {
+#message-container .message-username {
   font-weight: bold;
   width: 10%;
   text-align: right
 }
-.message-text {
+#message-container .message-body {
     width: 77%;
 }
-.message-time {
+#message-container .message-timestamp {
   width: 10%;
   color: #c7c7c7;
   text-align: center;

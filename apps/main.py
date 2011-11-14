@@ -54,14 +54,14 @@ def find_list_item_by_nickname(nickname, target_list):
     else:
         return items[0]
 
-def check_users_online(users_list, chat_messages_list, since_timestamp=(time.time() - USER_TIMEOUT)):
-    """check for expired users and send a message they left the room"""
-    users = filter(lambda x: x.timestamp <= since_timestamp,
-                   users_list)
-    for user in users:
-        add_message(ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname),
-                    chat_messages_list)
-        remove_user(user, users_online)
+# def check_users_online(users_list, chat_messages_list, since_timestamp=(time.time() - USER_TIMEOUT)):
+#     """check for expired users and send a message they left the room"""
+#     users = filter(lambda x: x.timestamp <= since_timestamp,
+#                    users_list)
+#     for user in users:
+#         add_message(ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname),
+#                     chat_messages_list)
+#         remove_user(user, users_online)
 
 class User(Document):
     """a chat user"""
@@ -160,7 +160,7 @@ class LoginHandler(JSONMessageHandler):
     def prepare(self):
         self.headers = {'Content-Type': 'application/json'}
 
-    def post(self, nickname):        
+    def post(self, nickname):
         if len(nickname) != 0:
 
             user = find_list_item_by_nickname(nickname, users_online)

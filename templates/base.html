@@ -6,10 +6,10 @@
     <script src="static/js/chat.js"></script>
     <script src="static/js/mustache.js"></script>
     <script id="message-template" type="text/plain">{% raw %}
-      <li>
-      <span class="message-username">{{nickname}}</span>
-      <span class="message-body">{{message}}</span>
-      <span class="message-timestamp">{{timestamp}}</span>
+      <li class="{{msgtype}}">
+        <span class="message-username">{{nickname}}</span>
+        <span class="message-body">{{message}}</span>
+        <span class="message-timestamp">{{formattedTime}}</span>
       </li>
       {% endraw %}</script>
     <script>

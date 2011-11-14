@@ -21,6 +21,7 @@ var Chat = (function($) {
   }
 
   var scrollToEnd = function() {
+    console.log("Scroll!");
     $(document).scrollTop($(document).height() + 500);
   }
 
@@ -51,13 +52,16 @@ var Chat = (function($) {
   var displayMessages = function(messages) {
     $(messages).each(function(){
       $messageContainer.append(renderMessage(this));
-      if(this.timestamp > lastMessageTimestamp)
-        lastMessageTimestamp = this.timestamp;
+      lastMessageTimestamp = this.timestamp;
     });
+    console.log(lastMessageTimestamp);
     scrollToEnd();
   };
 
   var renderMessage = function(message) {
+    var date = new Date();
+    date.setTime(message.timestamp);
+    message.formattedTime = date.toString().split(' ')[4];
     return Mustache.to_html(messageTemplate, message);
   };
 
@@ -81,7 +85,7 @@ var Chat = (function($) {
     $.ajax({
       type: 'POST',
       url: '/feed',
-      data: 'nickname=' + nickname + '&message=' + message,
+      data: 'nickname=' + username + '&message=' + message,
       success: function(){
         console.log("Hit send success block.");
         $composeMessageField.val("");
