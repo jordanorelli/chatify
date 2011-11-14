@@ -1,22 +1,11 @@
 #!/usr/bin/env python
+from brubeck.request_handling import Brubeck, JSONMessageHandler
 from brubeck.templating import load_jinja2_env, Jinja2Rendering
-from dictshield.document import Document
-import brubeck
-import gevent
-import os
-import sys
-import time
+from dictshield import fields
+from dictshield.fields import EmbeddedDocument, ShieldException
 from gevent.event import Event
-from brubeck.request_handling import(
-    Brubeck, JSONMessageHandler,
-    WebMessageHandler
-)
-from dictshield.fields import(
-    StringField, IntField,
-    FloatField, ListField,
-    EmbeddedDocumentField, EmbeddedDocument,
-    ShieldException
-)
+import os
+import time
 
 ## hold our messages in memory here, limit to last 20
 LIST_SIZE = 50
@@ -43,17 +32,17 @@ def get_messages(since_timestamp=0):
 
 class ChatMessage(EmbeddedDocument):
     """A single message"""
-    timestamp = IntField(required=True)
-    nickname = StringField(required=True, max_length=40)
-    message = StringField(required=True)
-    msgtype = StringField(default='user',
+    timestamp = fields.IntField(required=True)
+    nickname = fields.StringField(required=True, max_length=40)
+    message = fields.StringField(required=True)
+    msgtype = fields.StringField(default='user',
                           choices=['user', 'error', 'system'])
 
     def __init__(self, *args, **kwargs):
         super(ChatMessage, self).__init__(*args, **kwargs)
         self.timestamp = int(time.time())
 
-class ChatifyHandler(WebMessageHandler, Jinja2Rendering):
+class ChatifyHandler(Jinja2Rendering):
     """Renders the chat interface template."""
 
     def get(self):
