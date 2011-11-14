@@ -112,12 +112,9 @@ var Chat = (function($) {
       async: true,
       cache: false,
       timeout: pollInterval,
-      // data: 'since_timestamp=' + since_timestamp,
       data: 'since_timestamp=' + lastMessageTimestamp,
       success: function(data) {
         displayMessages(data.messages);
-        // since_timestamp = displayMessages(data.messages, '#messages', since_timestamp);
-        console.log("getMessages success block hit.");
         poll();
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
@@ -149,11 +146,11 @@ var Chat = (function($) {
       event.preventDefault();
     });
 
-    $composeMessageField.keypress(function(event){
+    $composeMessageField.keyup(function(event){
       setButtonBehavior($(this), $sendMessageButton);
     });
 
-    $usernameField.keypress(function(event){
+    $usernameField.keyup(function(event){
       setButtonBehavior($(this), $loginButton);
     });
 
@@ -173,82 +170,6 @@ var Chat = (function($) {
   };
 })($);
 
-/* Adds messages to the chat log.
-* @messages - an array of messages.
-* @target_id - DOM ID of the element that we will inject the message element into
-*/
-// 
-// /* given a message object, returns a string representation of the message. */
-// function renderMessage(message) {
-//   var date = new Date();
-//   date.setTime(message.timestamp * 1000);
-//   var timeFormatted = date.toString().split(' ')[4];
-//   return '<div class="message-item ' + message.msgtype + '">' +
-//     '<span class="message-nickname">' + sanitize(message.nickname)     + '</span>' +
-//     '<span class="message-text">'     + sanitize(message.message)      + '</span>' +
-//     '<span class="message-time">'     + timeFormatted  + '</span>' +
-//     '</div>';
-// }
-// 
-// 
-// function getMessages(since_timestamp) {
-//   $.ajax({
-//     type: "GET",
-//     url: "/feed",
-//     async: true,
-//     cache: false,
-//     timeout:50000,
-//     data: 'since_timestamp=' + since_timestamp,
-//     success: function(data) {
-//       since_timestamp = displayMessages(data.messages, '#messages', since_timestamp);
-//       console.log("getMessages success block hit.");
-//       setTimeout(function() {
-//         getMessages(since_timestamp);
-//       }, 1000);
-//     },
-//     error: function(XMLHttpRequest, textStatus, errorThrown) {
-//       displayMessages([{
-//         timestamp: '',
-//         nickname: 'system',
-//         message: errorThrown,
-//         msgtype: textStatus
-//       }], '#messages', since_timestamp);
-//       setTimeout(function() {
-//         getMessages(since_timestamp);
-//       }, 15000);
-//     },
-//   });
-// };
-// 
-// function login(nickname) {
-//   console.log("Logging in as " + nickname);
-//   $.ajax({
-//     type: "POST",
-//     url: "/login/" + escape(nickname),
-//     async: true,
-//     cache: false,
-//     timeout: 30000,
-//     success: function(data){
-//       $("#login-form").css("display", "none");
-//       $("#messages").css("display", "block");
-//       $("#send-form").css("display", "block");
-//       $("#whoiam").html(sanitize($("#nickname").val()) + " : ");
-//       $("#message").focus();
-//     },
-//     error: function(XMLHttpRequest, textStatus, errorThrown) {
-//       since_timestamp = displayMessages([{
-//         timestamp: '',
-//         nickname: 'system',
-//         message: errorThrown,
-//         msgtype: textStatus
-//       }], '#messages', 0);
-// 
-//       $("#nickname").removeAttr("disabled");
-//       $("#login").removeAttr("disabled");
-//     }
-//   });
-// }
-// 
 // function logout(nickname) {
 //   console.log("Logging out " + nickname);
 //   $.ajax({
@@ -275,31 +196,11 @@ var Chat = (function($) {
 //     }
 //   });
 // }
-// 
+
 // $(document).ready(function(){
-//   var since_timestamp = 0;
-//   var $nickField   = $("#nickname"  );
-//   var $messageBox  = $("#message"   );
-//   var $loginForm   = $("#login-form");
-//   var $sendForm    = $("#send-form" );
-//   var $loginButton = $("#login"     );
-//   var $sendButton  = $("#send"      );
-// 
-//   $nickField.focus();
-// 
 //   $(window).unload(function(event){
 //     logout($nickField.val().trim());
 //   });
-// 
-//   $nickField.keypress(function(event){
-//     var nickname = $(this).val().trim();
-//     if(nickname!=''){
-//       $loginButton.removeAttr("disabled");
-//     } else {
-//       $loginButton.attr("disabled", "disabled");
-//     }
-//   });
-// 
 //   $messageBox.keypress(function(event){
 //     var message = $(this).val().trim();
 //     if(message!=''){
