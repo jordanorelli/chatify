@@ -136,6 +136,7 @@ class FeedHandler(JSONMessageHandler):
     def post(self):
         nickname = self.get_argument('nickname')
         message = self.get_argument('message')
+        print message
         chat_message = ChatMessage(**{'nickname': nickname, 'message': message})
 
         try:
