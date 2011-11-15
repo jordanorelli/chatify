@@ -25,6 +25,14 @@ var Chat = (function($) {
     .replace(/>/g, "&gt;");
   }
 
+  // Formats the message for display.
+  // Replaces newlines with the <br /> element
+  var format = function(text) {
+    return text.replace(/\r\n/g, "<br />")
+    .replace(/\n/g, "<br />");
+  }
+
+
   // Scrolls the window to the bottom of the chat dialogue.
   var scrollToEnd = function() {
     $(document).scrollTop($(document).height() + 500);
@@ -95,6 +103,9 @@ var Chat = (function($) {
   // according to the Mustache template defined as messageTemplate.
   var displayMessages = function(messages) {
     $(messages).each(function(){
+      console.log(this.message);
+      this.message = format(sanitize(this.message));
+      console.log(this.message);
       $messageContainer.append(renderMessage(this));
       if(this.timestamp && this.timestamp > lastMessageTimestamp) {
         lastMessageTimestamp = this.timestamp;
@@ -132,6 +143,21 @@ var Chat = (function($) {
     $composeMessageField.blur();
     $composeMessageField.attr("disabled", "disabled");
 
+    data = 'nickname=' + username + '&message=' + message;
+
+    $.post('/feed', data)
+      .success( function(){
+        $composeMessageField.val("");
+      })
+      .error( function(XMLHttpRequest, textStatus, errorThrown) {
+        console.log(errorThrown);
+      })
+      .complete( function(){
+        $composeMessageField.removeAttr("disabled");
+        $composeMessageField.focus();
+        $this.removeAttr("disabled");
+      });
+/*
     $.ajax({
       type: 'POST',
       url: '/feed',
@@ -148,7 +174,7 @@ var Chat = (function($) {
         $this.removeAttr("disabled");
       }
     });
-
+*/
     event.preventDefault();
     event.stopPropagation();
     return false;
@@ -165,7 +191,7 @@ var Chat = (function($) {
       async: true,
       cache: false,
       timeout: 1200000,
-      data: 'since_timestamp=' + lastMessageTimestamp,
+      data: 'since_timestamp=' + lastMessageTimestamp + '&nickname=' + username,
       success: function(data) {
         displayMessages(data.messages);
       },
