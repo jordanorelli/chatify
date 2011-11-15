@@ -8,6 +8,7 @@ from gevent.event import Event
 from urllib import unquote
 import os
 import time
+from gevent import Greenlet
 
 ## hold our messages in memory here, limit to last 20
 LIST_SIZE = 50
@@ -16,7 +17,7 @@ chat_messages = []
 new_message_event = Event()
 
 ## Our long polling interval
-POLL_INTERVAL = 30
+POLLING_INTERVAL = 30
 
 ## How old a user must be in seconds to kick them out of the room
 USER_TIMEOUT = 60
@@ -55,14 +56,22 @@ def find_list_item_by_nickname(nickname, target_list):
     else:
         return items[0]
 
-# def check_users_online(users_list, chat_messages_list, since_timestamp=(time.time() - USER_TIMEOUT)):
-#     """check for expired users and send a message they left the room"""
-#     users = filter(lambda x: x.timestamp <= since_timestamp,
-#                    users_list)
-#     for user in users:
-#         add_message(ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname),
-#                     chat_messages_list)
-#         remove_user(user, users_online)
+def check_users_online(users_list, chat_messages_list):
+    """check for expired users and send a message they left the room"""
+    since_timestamp = (time.time() * 1000) - (USER_TIMEOUT * 1000)
+
+    print "checking online users to purge expired"
+
+    users = filter(lambda x: x.timestamp <= since_timestamp,
+                   users_list)
+    for user in users:
+        add_message(ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname),
+                    chat_messages_list)
+        remove_user(user, users_online)
+
+    ## setup our next check
+    g = Greenlet(check_users_online, users_online, chat_messages)
+    g.start_later(POLLING_INTERVAL)
 
 class User(Document):
     """a chat user"""
@@ -120,7 +129,7 @@ class FeedHandler(JSONMessageHandler):
             messages = get_messages(chat_messages)
 
         if len(messages)==0:
-            new_message_event.wait(POLL_INTERVAL)
+            new_message_event.wait(POLLING_INTERVAL)
             print "waking up"
             try:
                 messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
@@ -215,7 +224,7 @@ class LoginHandler(JSONMessageHandler):
         return self.render()
 
     def set_cookies(self):
-        # Resolve cookies into multiline value
+        """Resolve cookies into multiline value"""
         cookie_vals = [c.OutputString() for c in self.cookies.values()]
         if len(cookie_vals) > 0:
             cookie_str = '\nSet-Cookie: '.join(cookie_vals)
@@ -240,4 +249,10 @@ config = {
 app = Brubeck(**config)
 ## this allows us to import the demo as a module for unit tests without running the server
 if __name__ == "__main__":
+
+    ## spawn out online user checker to timeout users after inactivity
+    g = Greenlet(check_users_online, users_online, chat_messages)
+    g.start_later(POLLING_INTERVAL)
+    
+    ## start our server to handle requests
     app.run()
