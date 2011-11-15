@@ -47,6 +47,12 @@ def add_user(user, users_online_list):
 def remove_user(user, users_list):
     users_list.remove(user)
 
+def timestamp_active_user(nickname, target_list):
+    """updates the timestamp on the user to avoid expiration"""
+    user = find_list_item_by_nickname(nickname, target_list)
+    if user != None:
+        user.timestamp = int(time.time() * 1000)
+
 def find_list_item_by_nickname(nickname, target_list):
     """returns the first list item matching a nickname"""
     items = filter(lambda x: x.nickname == nickname,
@@ -120,7 +126,24 @@ class FeedHandler(JSONMessageHandler):
     def prepare(self):
         self.headers = {'Content-Type': 'application/json'}
 
+    def check_nickname(self):
+        """makes sure we are still an active user and updates our timestamp"""
+        try:
+            nickname = self.get_argument('nickname')
+            timestamp_active_user(nickname, users_online)
+        except:
+            self.set_status(403, 'session is expired')
+            raise ValueError("nickname empty or  not active")
+
+
     def get(self):
+        """gets any recent messages, or waits for new ones to appear"""
+        try:
+            self.check_nickname()
+        except ValueError, er:
+            print er.message
+            return self.render()        
+
         try:
             messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
 
@@ -147,6 +170,11 @@ class FeedHandler(JSONMessageHandler):
         return self.render()
 
     def post(self):
+        try:
+            self.check_nickname()
+        except:
+            return self.render()
+
         nickname = self.get_argument('nickname')
         message = self.get_argument('message')
         print "%s: %s" % (nickname, message)
@@ -171,13 +199,14 @@ class LoginHandler(JSONMessageHandler):
         self.headers = {'Content-Type': 'application/json'}
 
     def post(self, nickname):
+        nickname = unquote(nickname)
         if len(nickname) != 0:
 
             user = find_list_item_by_nickname(nickname, users_online)
             if user == None :
-                user=add_user(User(nickname=unquote(nickname)), users_online)
+                user=add_user(User(nickname=nickname), users_online)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
-                    message="%s has entered the room" % unquote(nickname), msgtype='system')
+                    message="%s has entered the room" % nickname, msgtype='system')
                 add_message(msg, chat_messages)
 
                 ## respond to the client our success
@@ -198,15 +227,16 @@ class LoginHandler(JSONMessageHandler):
 
     def delete(self, nickname):
         """ remove a user from the chat session"""
+        nickname = unquote(nickname)
         if len(nickname) != 0:
 
             ## remove our user and alert others in the chat room
-            user = find_list_item_by_nickname(unquote(nickname), users_online)
+            user = find_list_item_by_nickname(nickname, users_online)
 
             if user != None:
                 remove_user(user, users_online)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
-                   message='%s has left the room.' % unquote(nickname), msgtype='system')
+                   message='%s has left the room.' % nickname, msgtype='system')
                 add_message(msg, chat_messages)
 
                 ## respond to the client our success
@@ -215,7 +245,7 @@ class LoginHandler(JSONMessageHandler):
 
             else:
                 ## let the client know we failed because they didn't ask nice
-                self.set_status(403, unquote(nicknmame) + ' is not in the room')
+                self.set_status(403, nickname + ' is not in the room')
 
         else:
             ## let the client know we failed because they didn't ask nice
