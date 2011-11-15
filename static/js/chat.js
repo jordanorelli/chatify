@@ -1,36 +1,44 @@
 var Chat = (function($) {
-  var $chatElements;
-  var $messageContainer;
-  var $inputContainer;
-  var $loginButton;
-  var $logoutButton;
-  var $loginElements;
-  var $loginErrors;
-  var $usernameField;
-  var $usernameDisplay;
-  var $sendMessageButton;
-  var $composeMessageField;
-  var messageTemplate;
-  var username;
-  var pollID;
-  var pollInterval = 30000;
-  var lastMessageTimestamp = 0;
+  var $loginElements;           // elements shown when the user is logged out
+  var $usernameField;           // allows the user to input a desired username
+  var $loginButton;             // element to which a login function is bound
+  var $loginErrors;             // an element where we will place login errors
 
+  var $chatElements;            // elements shown when the user is logged in
+  var $usernameDisplay;         // shows the user their current username
+  var $messageContainer;        // element to hold messages as they arrive
+  var messageTemplate;          // a Mustache template for rendering messages
+  var $composeMessageField;     // allows the user to input a chat message
+  var $sendMessageButton;       // element to attach a "send message" function to
+  var $logoutButton;            // element to which a logout function is bound
+
+  var username = '';            // holds the currently logged in username.  If this
+  var loggedIn = false;
+  var lastMessageTimestamp = 0; // Timestamp of the last message received
+                                // Timestamp is represented as unix epoch time, in
+                                // milliseconds.  Probably should truncate that.
+
+  // Removes (some) HTML characters to prevent HTML injection.
   var sanitize = function(text) {
     return text.replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
   }
 
+  // Scrolls the window to the bottom of the chat dialogue.
   var scrollToEnd = function() {
     $(document).scrollTop($(document).height() + 500);
   }
 
+  // A primitve UI state controller. Call with true to show the "logged in" UI;
+  // call with false to show the "logged out" UI.
   var setChatDisplay = function (enabled) {
     $loginElements.toggle(!enabled);
     $chatElements.toggle(enabled);
   }
 
+  // Performs an ajax call to log the user in.  Sends an empty POST request
+  // with the username in the request URL.
   var login = function() {
     var desiredUsername = $usernameField.val().trim();
     $.ajax({
@@ -41,6 +49,7 @@ var Chat = (function($) {
       timeout: 30000,
       success: function(data){
         username = sanitize(desiredUsername);
+        loggedIn = true;
         $usernameDisplay.html(username);
         setChatDisplay(true);
         $loginErrors.toggle(false);
@@ -54,6 +63,8 @@ var Chat = (function($) {
     });
   };
 
+  // Performs an ajax call to log the user out.  Sends an empty DELETE request
+  // with the username in the request URL.
   var logout = function() {
     setChatDisplay(false);
     $.ajax({
@@ -63,7 +74,8 @@ var Chat = (function($) {
       cache: false,
       timeout: 30000,
       success: function(data){
-        username = undefined;
+        username = '';
+        loggedIn = false;
         toggleDisplay(false);
         $usernameField.focus();
       },
@@ -79,14 +91,20 @@ var Chat = (function($) {
     });
   }
 
+  // Given a list of messages, appends them to the $messageContainer element,
+  // according to the Mustache template defined as messageTemplate.
   var displayMessages = function(messages) {
     $(messages).each(function(){
       $messageContainer.append(renderMessage(this));
-      lastMessageTimestamp = this.timestamp;
+      if(this.timestamp && this.timestamp > lastMessageTimestamp) {
+        lastMessageTimestamp = this.timestamp;
+      }
     });
     scrollToEnd();
   };
 
+  // Renders a message object using the Mustache template stored in the
+  // variable messageTemplate.  Formats the timestamp accordingly. */
   var renderMessage = function(message) {
     var date = new Date();
     date.setTime(message.timestamp);
@@ -94,6 +112,8 @@ var Chat = (function($) {
     return Mustache.to_html(messageTemplate, message);
   };
 
+  // Given an input element and a button element, disables the button if the
+  // input field is empty.
   var setButtonBehavior = function($inputField, $submitButton){
     var value = $inputField.val().trim();
     if(value){
@@ -103,6 +123,8 @@ var Chat = (function($) {
     }
   };
 
+  // processes a send message request.  The message is sent as a POST request,
+  // with the message text defined in the POST body.
   var sendMessageClick = function(event) {
     var $this = $(this);
     var message = $composeMessageField.val();
@@ -132,13 +154,17 @@ var Chat = (function($) {
     return false;
   };
 
+  // sends a GET request for new messages.  This function will recurse indefinitely.
   var poll = function() {
+    if (!loggedIn) {
+      return false;
+    }
     $.ajax({
       type: "GET",
       url: "/feed",
       async: true,
       cache: false,
-      timeout: pollInterval,
+      timeout: 1200000,
       data: 'since_timestamp=' + lastMessageTimestamp,
       success: function(data) {
         displayMessages(data.messages);
@@ -157,10 +183,14 @@ var Chat = (function($) {
     });
   };
 
+  // Our main setup function.  This function performs no dom manipulation directly,
+  // so the layout of your page is preserved after it is called. Accepts a
+  // config object as its only argument, which is used to specify jQuery
+  // selectors of to bind event listeners to, as well as a Mustache template to
+  // dictate how a message should be formatted.
   var buildChatWindow = function(config) {
     $chatElements = $(config.chatElements);
     $messageContainer = $(config.messageContainer);
-    $inputContainer = $(config.inputContainer);
     $loginButton = $(config.loginButton);
     $logoutButton = $(config.logoutButton);
     $loginElements = $(config.loginElements);
@@ -186,12 +216,8 @@ var Chat = (function($) {
     });
 
     $composeMessageField.keydown(function(event) {
-      switch(event.keyCode) {
-        case 13: // enter
-          if(!event.shiftKey)
-            $sendMessageButton.click();
-          break;
-      }
+      if(event.keyCode == 13 && !event.shiftKey)
+        $sendMessageButton.click();
     });
 
     $(window).unload(function(event){
@@ -216,5 +242,3 @@ var Chat = (function($) {
     doNothing: doNothing
   };
 })($);
-
-
