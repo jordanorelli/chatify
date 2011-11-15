@@ -5,6 +5,12 @@ body {
     padding: 0;
     margin: 0;
 }
+h1 {
+ padding: 0 0 0 .425em;
+ margin: 0;
+ font-size: 16pt;
+ display: inline;
+}
 #header { 
     position: fixed;
     top: 0;
@@ -12,9 +18,15 @@ body {
     font-size: 16pt;
     background: #333; 
     color: #fff; 
-    padding: 10px;
-    height: 28px;
+    padding: 4px;
+    height: 24px;
     width: 100%;
+    min-width: 600px;
+}
+h1 .subtitle {
+ font-size: .5em;
+ color: #fefefe;
+ padding-left: 1em;
 }
 #content {
     margin-top: 48px;
@@ -30,7 +42,6 @@ body {
     padding: 0;
     margin: 0;
 }
-
 #send-form {
     font-size: 14pt;
     width: 100%;
@@ -84,7 +95,6 @@ body {
 #logout-button {
   float: right;
   margin-right: 20px;
-  underline: none;
 }
 #logout-button:link {
   text-decoration: none;
