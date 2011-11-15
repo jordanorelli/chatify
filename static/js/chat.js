@@ -44,6 +44,7 @@ var Chat = (function($) {
         $usernameDisplay.html(username);
         setChatDisplay(true);
         $loginErrors.toggle(false);
+        $composeMessageField.focus();
         poll();
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
@@ -193,6 +194,10 @@ var Chat = (function($) {
       }
     });
 
+    $(window).unload(function(event){
+      logout();
+    });
+
     $usernameField.keyup(function(event) {
       setButtonBehavior($(this), $loginButton);
     });
@@ -213,8 +218,3 @@ var Chat = (function($) {
 })($);
 
 
-// $(document).ready(function(){
-//   $(window).unload(function(event){
-//     logout($nickField.val().trim());
-//   });
-// });
