@@ -204,7 +204,7 @@ class LoginHandler(JSONMessageHandler):
             user = find_list_item_by_nickname(nickname, users_online)
 
             if user != None:
-                remove_user(user, users_online_list)
+                remove_user(user, users_online)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
                    message='%s has left the room.' % nickname, msgtype='system')
                 add_message(msg, chat_messages)
