@@ -175,7 +175,7 @@ class LoginHandler(JSONMessageHandler):
 
             user = find_list_item_by_nickname(nickname, users_online)
             if user == None :
-                user=add_user(User(nickname=nickname), users_online)
+                user=add_user(User(nickname=unquote(nickname)), users_online)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
                     message="%s has entered the room" % unquote(nickname), msgtype='system')
                 add_message(msg, chat_messages)
@@ -201,21 +201,21 @@ class LoginHandler(JSONMessageHandler):
         if len(nickname) != 0:
 
             ## remove our user and alert others in the chat room
-            user = find_list_item_by_nickname(nickname, users_online)
+            user = find_list_item_by_nickname(unquote(nickname), users_online)
 
             if user != None:
                 remove_user(user, users_online)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
-                   message='%s has left the room.' % nickname, msgtype='system')
+                   message='%s has left the room.' % unquote(nickname), msgtype='system')
                 add_message(msg, chat_messages)
 
                 ## respond to the client our success
                 self.set_status(200)
-                self.add_to_payload('message',nickname + ' has left the chat room')
+                self.add_to_payload('message',unquote(nickname) + ' has left the chat room')
 
             else:
                 ## let the client know we failed because they didn't ask nice
-                self.set_status(403, nicknmame + ' is not in the room')
+                self.set_status(403, unquote(nicknmame) + ' is not in the room')
 
         else:
             ## let the client know we failed because they didn't ask nice
