@@ -1,9 +1,10 @@
 var Chat = (function($) {
-  var $chatContainer;
+  var $chatElements;
   var $messageContainer;
   var $inputContainer;
   var $loginButton;
-  var $loginContainer;
+  var $logoutButton;
+  var $loginElements;
   var $loginErrors;
   var $usernameField;
   var $usernameDisplay;
@@ -22,8 +23,12 @@ var Chat = (function($) {
   }
 
   var scrollToEnd = function() {
-    console.log("Scroll!");
     $(document).scrollTop($(document).height() + 500);
+  }
+
+  var setChatDisplay = function (enabled) {
+    $loginElements.toggle(!enabled);
+    $chatElements.toggle(enabled);
   }
 
   var login = function() {
@@ -37,25 +42,47 @@ var Chat = (function($) {
       success: function(data){
         username = sanitize(desiredUsername);
         $usernameDisplay.html(username);
-        $loginContainer.hide();
-        $loginErrors.hide();
-        $chatContainer.show();
+        setChatDisplay(true);
+        $loginErrors.toggle(false);
         poll();
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
-        console.log(errorThrown);
         $loginErrors.text(errorThrown);
-        $loginErrors.show();
+        $loginErrors.toggle(true);
       }
     });
   };
+
+  var logout = function() {
+    setChatDisplay(false);
+    $.ajax({
+      type: "DELETE",
+      url: "/login/" + username,
+      async: true,
+      cache: false,
+      timeout: 30000,
+      success: function(data){
+        username = undefined;
+        toggleDisplay(false);
+        $usernameField.focus();
+      },
+      error: function(XMLHttpRequest, textStatus, errorThrown) {
+        displayMessages([{
+          timestamp: '',
+          timestamp: '',
+          nickname: 'system',
+          message: errorThrown,
+          msgtype: textStatus
+        }], '#messages', 0);
+      }
+    });
+  }
 
   var displayMessages = function(messages) {
     $(messages).each(function(){
       $messageContainer.append(renderMessage(this));
       lastMessageTimestamp = this.timestamp;
     });
-    console.log(lastMessageTimestamp);
     scrollToEnd();
   };
 
@@ -82,13 +109,11 @@ var Chat = (function($) {
     $composeMessageField.blur();
     $composeMessageField.attr("disabled", "disabled");
 
-    console.log("Attempting to send message: " + message);
     $.ajax({
       type: 'POST',
       url: '/feed',
       data: 'nickname=' + username + '&message=' + message,
       success: function(){
-        console.log("Hit send success block.");
         $composeMessageField.val("");
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
@@ -116,7 +141,6 @@ var Chat = (function($) {
       data: 'since_timestamp=' + lastMessageTimestamp,
       success: function(data) {
         displayMessages(data.messages);
-        poll();
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
         displayMessages([{
@@ -124,18 +148,21 @@ var Chat = (function($) {
           nickname: 'system',
           message: errorThrown,
           msgtype: textStatus
-        }], '#messages', since_timestamp);
+        }], '#messages', lastMessageTimestamp);
+      },
+      complete: function() {
         poll();
       }
     });
   };
 
   var buildChatWindow = function(config) {
-    $chatContainer = $(config.chatContainer);
+    $chatElements = $(config.chatElements);
     $messageContainer = $(config.messageContainer);
     $inputContainer = $(config.inputContainer);
     $loginButton = $(config.loginButton);
-    $loginContainer = $(config.loginContainer);
+    $logoutButton = $(config.logoutButton);
+    $loginElements = $(config.loginElements);
     $loginErrors = $(config.loginErrors);
     $sendMessageButton = $(config.sendMessageButton);
     $composeMessageField = $(config.composeMessageField);
@@ -145,6 +172,11 @@ var Chat = (function($) {
 
     $loginButton.click(function(event) {
       login();
+      event.preventDefault();
+    });
+
+    $logoutButton.click(function(event) {
+      logout();
       event.preventDefault();
     });
 
@@ -180,32 +212,6 @@ var Chat = (function($) {
   };
 })($);
 
-// function logout(nickname) {
-//   console.log("Logging out " + nickname);
-//   $.ajax({
-//     type: "DELETE",
-//     url: "/login/" + escape(nickname),
-//     async: true,
-//     cache: false,
-//     timeout: 30000,
-//     success: function(data){
-//       $("#send-form").css("display", "none");
-//       $("#messages").css("display", "none");
-//       $("#login-form").css("display", "block");
-//       $("#whoiam").html("anonymous : ");
-//       $("#nickname").focus();
-//     },
-//     error: function(XMLHttpRequest, textStatus, errorThrown) {
-//       displayMessages([{
-//         timestamp: '',
-//         timestamp: '',
-//         nickname: 'system',
-//         message: errorThrown,
-//         msgtype: textStatus
-//       }], '#messages', 0);
-//     }
-//   });
-// }
 
 // $(document).ready(function(){
 //   $(window).unload(function(event){

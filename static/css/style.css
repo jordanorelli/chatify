@@ -81,6 +81,22 @@ body {
     display: block;
 }
 
+#logout-button {
+  float: right;
+  margin-right: 20px;
+  underline: none;
+}
+#logout-button:link {
+  text-decoration: none;
+  color: #888888;
+}
+#logout-button:hover {
+  text-decoration: underline;
+}
+#logout-button:visited {
+  color: #888888;
+}
+
 #current-username, #message, #send-button {
     padding: .5%;
 }

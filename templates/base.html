@@ -15,11 +15,12 @@
     <script>
       $(document).ready(function() {
         Chat.buildChatWindow({
-          chatContainer: "#chat-container",
+          chatElements: "#chat-container, #logout-button",
           messageContainer: "#message-container",
           inputContainer: "#input-container",
           loginButton: "#login-button",
-          loginContainer: "#login-container",
+          logoutButton: "#logout-button",
+          loginElements: "#login-container",
           loginErrors: "#login-errors",
           usernameField: "#nickname",
           usernameDisplay: "#current-username",
@@ -33,6 +34,7 @@
   <body>
     <div id="header">
       Chatify, a Brubeck demo built in the belly of Spotify by a couple hackers.
+      <a id="logout-button" href="#" style="display: none;">log out</a>
     </div>
     <div id="content">
       <div id="login-container">
