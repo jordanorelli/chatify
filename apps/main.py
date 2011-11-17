@@ -135,6 +135,16 @@ class FeedHandler(JSONMessageHandler):
             self.set_status(403, 'session is expired')
             raise ValueError("nickname empty or  not active")
 
+    def get_messages(self):
+        """checks for new messages"""
+        try:
+            messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
+
+        except ValueError as e:
+            messages = get_messages(chat_messages)
+
+        return messages
+
 
     def get(self):
         """gets any recent messages, or waits for new ones to appear"""
@@ -144,28 +154,17 @@ class FeedHandler(JSONMessageHandler):
             print er.message
             return self.render()        
 
-        try:
-            messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
-
-        except ValueError as e:
-            print "failed to get message"
-            messages = get_messages(chat_messages)
+        messages = self.get_messages()
 
         if len(messages)==0:
+            # we don't have any messages so sleep for a bit
             new_message_event.wait(POLLING_INTERVAL)
-            print "waking up"
-            try:
-                messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
-    
-            except ValueError as e:
-                messages = get_messages(chat_messages)
+            # done sleeping or woken up
+            #check again and return response regardless
+            messages = self.get_messages()
 
-            self.set_status(200)
-            self.add_to_payload('messages', messages)
-
-        else:
-            self.set_status(200)
-            self.add_to_payload('messages', messages)
+        self.set_status(200)
+        self.add_to_payload('messages', messages)
 
         return self.render()
 
