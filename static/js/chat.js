@@ -140,8 +140,8 @@ var Chat = (function($) {
   // processes a send message request.  The message is sent as a POST request,
   // with the message text defined in the POST body.
   var sendMessageClick = function(event) {
-    var $this = $(this);
-    var message = $composeMessageField.val();
+    var $this = $(this);    
+    var message = $composeMessageField.val().trim();
     $this.attr("disabled", "disabled");
     $composeMessageField.blur();
     $composeMessageField.attr("disabled", "disabled");
@@ -233,8 +233,13 @@ var Chat = (function($) {
     });
 
     $composeMessageField.keydown(function(event) {
-      if(event.keyCode == 13 && !event.shiftKey)
-        $sendMessageButton.click();
+      if(event.keyCode == 13 && !event.shiftKey){
+        if($composeMessageField.val().trim()){
+          $sendMessageButton.click();
+        } else {
+          return false;
+        }
+      }
     });
 
     $(window).unload(function(event){
@@ -246,7 +251,8 @@ var Chat = (function($) {
     });
 
     $sendMessageButton.click(function(event) {
-      sendMessageClick(event);
+      if($composeMessageField.val().trim())
+        sendMessageClick(event);
     });
   };
 
