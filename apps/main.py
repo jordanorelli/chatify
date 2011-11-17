@@ -106,7 +106,7 @@ class ChatifyHandler(Jinja2Rendering):
     """Renders the chat interface template."""
 
     def get(self):
-        return self.render_template('base.html', context=context)
+        return self.render_template('base.html')
 
 class FeedHandler(JSONMessageHandler):
     """Handles poll requests from user; sends out queued messages."""
