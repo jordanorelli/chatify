@@ -28,9 +28,13 @@ var Chat = (function($) {
 
   // Formats the message for display.
   // Replaces newlines with the <br /> element
+  // replaces tabs with 2-spaces
+  // replaces leading spaces with non-breaking spaces
   var format = function(text) {
-    return text.replace(/\r\n/g, "<br />")
-    .replace(/\n/g, "<br />");
+    return text.replace(/^\t*/, "&nbsp;&nbsp;")
+    .replace(/\r\n/g, "<br/>")
+    .replace(/\n/g, "<br/>")
+    .replace(/\s/g, "&nbsp;");
   }
 
 
