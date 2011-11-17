@@ -49,7 +49,7 @@ var Chat = (function($) {
   // Performs an ajax call to log the user in.  Sends an empty POST request
   // with the username in the request URL.
   var login = function() {
-    var desiredUsername = $.trim(($usernameField.val());
+    var desiredUsername = $.trim($usernameField.val());
     $.ajax({
       type: "POST",
       url: "/login/" + desiredUsername,
@@ -264,7 +264,7 @@ var Chat = (function($) {
     });
 
     $sendMessageButton.click(function(event) {
-      if($.trim(seMessageField.val()))
+      if($.trim($composeMessageField.val()))
         sendMessageClick(event);
     });
   };
