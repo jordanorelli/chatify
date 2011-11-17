@@ -11,6 +11,7 @@ var Chat = (function($) {
   var $composeMessageField;     // allows the user to input a chat message
   var $sendMessageButton;       // element to attach a "send message" function to
   var $logoutButton;            // element to which a logout function is bound
+  var $chatErrors;              // an element where we will place chat errors
 
   var username = '';            // holds the currently logged in username.  If this
   var loggedIn = false;
@@ -54,7 +55,7 @@ var Chat = (function($) {
       url: "/login/" + desiredUsername,
       async: true,
       cache: false,
-      timeout: 30000,
+      timeout: 5000,
       success: function(data){
         username = sanitize(desiredUsername);
         loggedIn = true;
@@ -85,6 +86,8 @@ var Chat = (function($) {
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {       
         // do nothing, we logout in complete even if we fail
+        $loginErrors.text(errorThrown);
+        $loginErrors.toggle(true);
       },
       complete: function() {
         logoutClient()
@@ -151,9 +154,10 @@ var Chat = (function($) {
     $.post('/feed', data)
       .success( function(){
         $composeMessageField.val("");
+        $chatErrors.toggle(false);
       })
       .error( function(XMLHttpRequest, textStatus, errorThrown) {
-        console.log(errorThrown);
+        handleChatError(textStatus, errorThrown);
       })
       .complete( function(){
         $composeMessageField.removeAttr("disabled");
@@ -182,23 +186,28 @@ var Chat = (function($) {
         displayMessages(data.messages);
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
-        // if we have an expired session return us to the login screen
-        if(errorThrown==='session is expired'){
-          logoutClient()         
-        } else {
-          displayMessages([{
-            timestamp: '',
-            nickname: 'system',
-            message: errorThrown,
-            msgtype: textStatus
-          }], '#messages', lastMessageTimestamp);
-        }
+        handleChatError(textStatus, errorThrown);
       },
       complete: function() {
         poll();
       }
     });
   };
+
+  // display our chat errors
+  // if the session has timed out, boot them
+  var handleChatError = function(textStatus, errorThrown) {
+        if(errorThrown==='session is expired'){
+          logoutClient();
+          $loginErrors.text(errorThrown);
+          $loginErrors.toggle(true);
+        } else {
+          if (errorThrown ==='')
+            errorThrown = 'unable to contact server';
+          $chatErrors.text(errorThrown);
+          $chatErrors.toggle(true);
+        }
+  }
 
   // Our main setup function.  This function performs no dom manipulation directly,
   // so the layout of your page is preserved after it is called. Accepts a
@@ -216,6 +225,7 @@ var Chat = (function($) {
     $composeMessageField = $(config.composeMessageField);
     $usernameField = $(config.usernameField);
     $usernameDisplay = $(config.usernameDisplay);
+    $chatErrors = $(config.chatErrors);
     messageTemplate = config.messageTemplate;
 
     $loginButton.click(function(event) {
@@ -259,6 +269,10 @@ var Chat = (function($) {
   var doNothing = function() {
     return false;
   };
+
+  // set a short default timeout
+  // we set this for most get requests that need to be longer
+  $.ajaxSetup({ timeout: 3000 } );
 
   return {
     buildChatWindow: buildChatWindow,

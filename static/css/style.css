@@ -126,6 +126,14 @@ h1 .subtitle {
     width: 10%;
 }
 
+.errors{
+    margin: 1em;
+    line-height: 1.5em;
+    color: red;
+    background-color: #FAA;
+    padding: .25em 1em;
+}
+
 #input_box { background: border: 1px #ccc solid; padding: 10px; width: 100%;}
 
 /*------------------------------------------------------------------------------

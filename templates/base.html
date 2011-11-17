@@ -11,7 +11,7 @@
         <span class="message-body">{{{message}}}</span>
         <span class="message-timestamp">{{formattedTime}}</span>
       </li>
-      {% endraw %}</script>
+    {% endraw %}</script>
     <script>
       $(document).ready(function() {
         Chat.buildChatWindow({
@@ -25,6 +25,7 @@
           usernameDisplay: "#current-username",
           sendMessageButton: "#send-button",
           composeMessageField: "#message",
+          chatErrors: "#chat-errors",
           messageTemplate: $("#message-template").html()
         });
 
@@ -50,7 +51,7 @@
           <input id="login-button" type="submit" name="join" value="join"
             disabled="disabled" />
         </form>
-        <span id="login-errors" style="display: none;"></span>
+        <span id="login-errors" class="errors" style="display: none;"></span>
 
       </div>
       <div id="chat-container" style="display: none;">
@@ -63,8 +64,9 @@
                 <label id="current-username" for="message">anonymous:</label>
                 <textarea id="message"></textarea>
                 <input id="send-button" type="submit" name="send" value="send"
-                  disabled="disabled" />
+                  disabled="disabled" />                
               </form>
+              <span id="chat-errors" class="errors"></span>
             </div>
           </div>
         </div>
