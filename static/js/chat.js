@@ -74,7 +74,6 @@ var Chat = (function($) {
   // Performs an ajax call to log the user out.  Sends an empty DELETE request
   // with the username in the request URL.
   var logout = function() {
-    setChatDisplay(false);
     $.ajax({
       type: "DELETE",
       url: "/login/" + username,
@@ -82,21 +81,25 @@ var Chat = (function($) {
       cache: false,
       timeout: 30000,
       success: function(data){
-        username = '';
-        loggedIn = false;
-        toggleDisplay(false);
-        $usernameField.focus();
+        // do nothing, we logout in complete
       },
-      error: function(XMLHttpRequest, textStatus, errorThrown) {
-        displayMessages([{
-          timestamp: '',
-          timestamp: '',
-          nickname: 'system',
-          message: errorThrown,
-          msgtype: textStatus
-        }], '#messages', 0);
+      error: function(XMLHttpRequest, textStatus, errorThrown) {       
+        // do nothing, we logout in complete even if we fail
+      },
+      complete: function() {
+        logoutClient()
       }
     });
+  }
+
+  // performs all the local actions needed to log a user out
+  // this will get called without logout ajax call when a session is expired
+  var logoutClient = function() {
+    setChatDisplay(false);    
+    username = '';
+    loggedIn = false;
+    $usernameField.val('');
+    $usernameField.focus();
   }
 
   // Given a list of messages, appends them to the $messageContainer element,
@@ -157,24 +160,7 @@ var Chat = (function($) {
         $composeMessageField.focus();
         $this.removeAttr("disabled");
       });
-/*
-    $.ajax({
-      type: 'POST',
-      url: '/feed',
-      data: 'nickname=' + username + '&message=' + message,
-      success: function(){
-        $composeMessageField.val("");
-      },
-      error: function(XMLHttpRequest, textStatus, errorThrown) {
-        console.log(errorThrown);
-      },
-      complete: function(){
-        $composeMessageField.removeAttr("disabled");
-        $composeMessageField.focus();
-        $this.removeAttr("disabled");
-      }
-    });
-*/
+    
     event.preventDefault();
     event.stopPropagation();
     return false;
@@ -196,12 +182,17 @@ var Chat = (function($) {
         displayMessages(data.messages);
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
-        displayMessages([{
-          timestamp: '',
-          nickname: 'system',
-          message: errorThrown,
-          msgtype: textStatus
-        }], '#messages', lastMessageTimestamp);
+        // if we have an expired session return us to the login screen
+        if(errorThrown==='session is expired'){
+          logoutClient()         
+        } else {
+          displayMessages([{
+            timestamp: '',
+            nickname: 'system',
+            message: errorThrown,
+            msgtype: textStatus
+          }], '#messages', lastMessageTimestamp);
+        }
       },
       complete: function() {
         poll();

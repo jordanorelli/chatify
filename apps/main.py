@@ -52,6 +52,8 @@ def timestamp_active_user(nickname, target_list):
     user = find_list_item_by_nickname(nickname, target_list)
     if user != None:
         user.timestamp = int(time.time() * 1000)
+    else:
+        raise ValueError("no such user in room")
 
 def find_list_item_by_nickname(nickname, target_list):
     """returns the first list item matching a nickname"""
@@ -133,7 +135,7 @@ class FeedHandler(JSONMessageHandler):
             timestamp_active_user(nickname, users_online)
         except:
             self.set_status(403, 'session is expired')
-            raise ValueError("nickname empty or  not active")
+            raise ValueError("nickname empty or not active")
 
     def get_messages(self):
         """checks for new messages"""
@@ -243,8 +245,8 @@ class LoginHandler(JSONMessageHandler):
                 self.add_to_payload('message',unquote(nickname) + ' has left the chat room')
 
             else:
-                ## let the client know we failed because they didn't ask nice
-                self.set_status(403, nickname + ' is not in the room')
+                ## let the client know we failed because they were not found
+                self.set_status(403, 'session is expired')
 
         else:
             ## let the client know we failed because they didn't ask nice
