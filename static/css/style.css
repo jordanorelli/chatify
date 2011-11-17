@@ -123,7 +123,7 @@ h1 .subtitle {
     height: 4em;
 }
 #send-button {
-    width: 10%;
+    width: 8%;
 }
 
 .errors{
@@ -176,7 +176,7 @@ h1 .subtitle {
     width: 77%;
 }
 #message-container .message-timestamp {
-  width: 10%;
+  width: 8%;
   color: #c7c7c7;
   text-align: center;
 }
