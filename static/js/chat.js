@@ -49,7 +49,7 @@ var Chat = (function($) {
   // Performs an ajax call to log the user in.  Sends an empty POST request
   // with the username in the request URL.
   var login = function() {
-    var desiredUsername = $usernameField.val().trim();
+    var desiredUsername = $.trim(($usernameField.val());
     $.ajax({
       type: "POST",
       url: "/login/" + desiredUsername,
@@ -130,7 +130,7 @@ var Chat = (function($) {
   // Given an input element and a button element, disables the button if the
   // input field is empty.
   var setButtonBehavior = function($inputField, $submitButton){
-    var value = $inputField.val().trim();
+    var value = $.trim($inputField.val());
     if(value){
       $submitButton.removeAttr("disabled");
     } else {
@@ -142,7 +142,7 @@ var Chat = (function($) {
   // with the message text defined in the POST body.
   var sendMessageClick = function(event) {
     var $this = $(this);    
-    var message = $composeMessageField.val().trim();
+    var message = $.trim($composeMessageField.val());
     $this.attr("disabled", "disabled");
     $composeMessageField.blur();
     $composeMessageField.attr("disabled", "disabled");
@@ -247,7 +247,7 @@ var Chat = (function($) {
 
     $composeMessageField.keydown(function(event) {
       if(event.keyCode == 13 && !event.shiftKey){
-        if($composeMessageField.val().trim()){
+        if($.trim($composeMessageField.val())){
           $sendMessageButton.click();
         } else {
           return false;
@@ -264,7 +264,7 @@ var Chat = (function($) {
     });
 
     $sendMessageButton.click(function(event) {
-      if($composeMessageField.val().trim())
+      if($.trim(seMessageField.val()))
         sendMessageClick(event);
     });
   };
