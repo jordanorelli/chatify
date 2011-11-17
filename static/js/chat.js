@@ -255,6 +255,15 @@ var Chat = (function($) {
       }
     });
 
+    $usernameField.keydown(function(event) {
+      if(event.keyCode == 13 ){
+        if($.trim($usernameField.val())){
+          $loginButton.click();
+        }
+      }
+    });
+
+
     $(window).unload(function(event){
       logout();
     });
@@ -269,16 +278,11 @@ var Chat = (function($) {
     });
   };
 
-  var doNothing = function() {
-    return false;
-  };
-
   // set a short default timeout
   // we set this for most get requests that need to be longer
   $.ajaxSetup({ timeout: 3000 } );
 
   return {
     buildChatWindow: buildChatWindow,
-    doNothing: doNothing
   };
 })($);

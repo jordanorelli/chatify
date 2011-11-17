@@ -45,12 +45,10 @@
         Leveraging the power of Python and Gevent make building a scalable chat server simple and fun.
         Check out the source code <a href="http://github.com/jordanorelli/chatify">here</a>.
         </p>
-        <form id="login-form" name="login" action="javascript:Chat.doNothing();">
-          <label id="whoareyou" for="nickname">Who are you?</label>
-          <input id="nickname" type="text"></input>
-          <input id="login-button" type="submit" name="join" value="join"
+        <label id="whoareyou" for="nickname">Who are you?</label>
+        <input id="nickname" type="text"></input>
+        <input id="login-button" type="submit" name="join" value="join"
             disabled="disabled" />
-        </form>
         <span id="login-errors" class="errors" style="display: none;"></span>
 
       </div>
@@ -60,12 +58,10 @@
         <div id="footer">
           <div id="input-container">
             <div id="send-form">
-              <form name="send" action="javascript:Chat.doNothing();">
-                <label id="current-username" for="message">anonymous:</label>
-                <textarea id="message"></textarea>
-                <input id="send-button" type="submit" name="send" value="send"
+              <label id="current-username" for="message">anonymous:</label>
+              <textarea id="message"></textarea>
+              <input id="send-button" type="submit" name="send" value="send"
                   disabled="disabled" />                
-              </form>
               <span id="chat-errors" class="errors" style="display: none;"></span>
             </div>
           </div>
