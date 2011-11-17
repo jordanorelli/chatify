@@ -10,6 +10,7 @@ h1 {
  margin: 0;
  font-size: 16pt;
  display: inline;
+ float: right;
 }
 #header { 
     position: fixed;
