@@ -129,9 +129,11 @@ h1 .subtitle {
 .errors{
     margin: 1em;
     line-height: 1.5em;
-    color: red;
+    color: #F00;
     background-color: #FAA;
     padding: .25em 1em;
+    border: 2px solid #F00;
+    display: block;
 }
 
 #input_box { background: border: 1px #ccc solid; padding: 10px; width: 100%;}

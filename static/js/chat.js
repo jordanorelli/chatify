@@ -66,8 +66,7 @@ var Chat = (function($) {
         poll();
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
-        $loginErrors.text(errorThrown);
-        $loginErrors.toggle(true);
+        handleError($loginErrors, textStatus, errorThrown);
       }
     });
   };
@@ -86,8 +85,7 @@ var Chat = (function($) {
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {       
         // do nothing, we logout in complete even if we fail
-        $loginErrors.text(errorThrown);
-        $loginErrors.toggle(true);
+        handleErrors($loginErrors, textStatus, errorThrown);
       },
       complete: function() {
         logoutClient()
@@ -157,7 +155,7 @@ var Chat = (function($) {
         $chatErrors.toggle(false);
       })
       .error( function(XMLHttpRequest, textStatus, errorThrown) {
-        handleChatError(textStatus, errorThrown);
+        handleError($chatErrors, textStatus, errorThrown);
       })
       .complete( function(){
         $composeMessageField.removeAttr("disabled");
@@ -186,7 +184,7 @@ var Chat = (function($) {
         displayMessages(data.messages);
       },
       error: function(XMLHttpRequest, textStatus, errorThrown) {
-        handleChatError(textStatus, errorThrown);
+        handleError($chatErrors, textStatus, errorThrown);
       },
       complete: function() {
         poll();
@@ -196,16 +194,21 @@ var Chat = (function($) {
 
   // display our chat errors
   // if the session has timed out, boot them
-  var handleChatError = function(textStatus, errorThrown) {
-        if(errorThrown==='session is expired'){
+  // if there is a network error, assume the server is down, boot them
+  var handleError = function($errorElement, textStatus, errorThrown) {
+        if(errorThrown === 'Authentication failed') {
           logoutClient();
-          $loginErrors.text(errorThrown);
+          $loginErrors.text('Authentication failed! Perhaps your session expired.');
+          $loginErrors.toggle(true);
+        } else if (errorThrown === 'Not found' || errorThrown === 'timeout') {
+          logoutClient();
+          $loginErrors.text('Chat server can not be found. Perhaps it is down, or you have no network connection.');
           $loginErrors.toggle(true);
         } else {
           if (errorThrown ==='')
-            errorThrown = 'unable to contact server';
-          $chatErrors.text(errorThrown);
-          $chatErrors.toggle(true);
+            errorThrown = 'Unable to contact server';
+          $errorElement.text(errorThrown);
+          $errorElement.toggle(true);
         }
   }
 

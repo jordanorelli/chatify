@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from brubeck.request_handling import Brubeck, JSONMessageHandler
 from brubeck.templating import load_jinja2_env, Jinja2Rendering
+from brubeck.auth import authenticated
 from dictshield import fields
 from dictshield.document import Document
 from dictshield.fields import EmbeddedDocument, ShieldException
@@ -9,6 +10,8 @@ from urllib import unquote
 import os
 import time
 from gevent import Greenlet
+import functools
+import logging
 
 ## hold our messages in memory here, limit to last 20
 LIST_SIZE = 50
@@ -52,8 +55,7 @@ def timestamp_active_user(nickname, target_list):
     user = find_list_item_by_nickname(nickname, target_list)
     if user != None:
         user.timestamp = int(time.time() * 1000)
-    else:
-        raise ValueError("no such user in room")
+    return user
 
 def find_list_item_by_nickname(nickname, target_list):
     """returns the first list item matching a nickname"""
@@ -108,23 +110,32 @@ class ChatifyHandler(Jinja2Rendering):
     def get(self):
         return self.render_template('base.html')
 
-class FeedHandler(JSONMessageHandler):
-    """Handles poll requests from user; sends out queued messages."""
+class ChatifyJSONMessageHandler(JSONMessageHandler):
+    """our JSON message handlers base class"""
 
     def prepare(self):
-        self.headers = {'Content-Type': 'application/json'}
+        """get our user from the request and set to self.current_user"""
 
-    def check_nickname(self):
-        """makes sure we are still an active user and updates our timestamp"""
         try:
             nickname = self.get_argument('nickname')
-            timestamp_active_user(nickname, users_online)
-        except:
-            self.set_status(403, 'session is expired')
-            raise ValueError("nickname empty or not active")
+            self.current_user = timestamp_active_user(nickname, users_online)
+            logging.info("current user nickname is %s" % self.current_user.nickname)
 
-    def get_messages(self):
+        except:
+            self.current_user = None
+            logging.info("No current user found")
+
+    def get_current_user(self):
+        """return  self.current_user set in self.prepare()"""
+        return self.current_user
+
+
+class FeedHandler(ChatifyJSONMessageHandler):
+    """Handles poll requests from user; sends out queued messages."""
+ 
+    def _get_messages(self):
         """checks for new messages"""
+
         try:
             messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
 
@@ -133,34 +144,27 @@ class FeedHandler(JSONMessageHandler):
 
         return messages
 
-
+    @authenticated
     def get(self):
         """gets any recent messages, or waits for new ones to appear"""
-        try:
-            self.check_nickname()
-        except ValueError, er:
-            print er.message
-            return self.render()        
 
-        messages = self.get_messages()
+        messages = self._get_messages()
 
         if len(messages)==0:
             # we don't have any messages so sleep for a bit
             new_message_event.wait(POLLING_INTERVAL)
+
             # done sleeping or woken up
             #check again and return response regardless
-            messages = self.get_messages()
+            messages = self._get_messages()
 
         self.set_status(200)
         self.add_to_payload('messages', messages)
 
         return self.render()
 
+    @authenticated
     def post(self):
-        try:
-            self.check_nickname()
-        except:
-            return self.render()
 
         nickname = unquote(self.get_argument('nickname'))
         message = unquote(self.get_argument('message'))
@@ -179,11 +183,8 @@ class FeedHandler(JSONMessageHandler):
 
         return self.render()
 
-class LoginHandler(JSONMessageHandler):
+class LoginHandler(ChatifyJSONMessageHandler):
     """Allows users to enter the chat room.  Does no authentication."""
-
-    def prepare(self):
-        self.headers = {'Content-Type': 'application/json'}
 
     def post(self, nickname):
         nickname = unquote(nickname)
@@ -209,7 +210,7 @@ class LoginHandler(JSONMessageHandler):
             ## let the client know we failed because they didn't ask nice
             self.set_status(403, 'missing nickname argument')
 
-        self.set_cookies()
+        self.convert_cookies()
         return self.render()
 
     def delete(self, nickname):
@@ -232,21 +233,13 @@ class LoginHandler(JSONMessageHandler):
 
             else:
                 ## let the client know we failed because they were not found
-                self.set_status(403, 'session is expired')
+                self.set_status(403, 'Authentication failed')
 
         else:
             ## let the client know we failed because they didn't ask nice
             self.set_status(403, 'missing nickname argument')
-        self.set_cookies()
+        self.convert_cookies()
         return self.render()
-
-    def set_cookies(self):
-        """Resolve cookies into multiline value"""
-        cookie_vals = [c.OutputString() for c in self.cookies.values()]
-        if len(cookie_vals) > 0:
-            cookie_str = '\nSet-Cookie: '.join(cookie_vals)
-            self.headers['Set-Cookie'] = cookie_str
-
 
 project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 template_dir = os.path.join(project_dir, 'templates')
