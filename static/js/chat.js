@@ -283,6 +283,6 @@ var Chat = (function($) {
   $.ajaxSetup({ timeout: 3000 } );
 
   return {
-    buildChatWindow: buildChatWindow,
+    buildChatWindow: buildChatWindow
   };
 })($);
