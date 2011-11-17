@@ -106,20 +106,6 @@ class ChatifyHandler(Jinja2Rendering):
     """Renders the chat interface template."""
 
     def get(self):
-        try:
-            nickname = self.get_cookie('nickname')
-            ## nickname = self.get_cookie('nickname', secret=self.application.cookie_secret)
-            auto_login_flag = 'var auto_login = true;'
-        except ValueError:
-            self.set_cookie('nickname','')
-            ##self.set_cookie('nickname','', secret=self.application.cookie_secret)
-            nickname = ''
-            auto_login_flag = 'var auto_login = false;'
-
-        context = {
-            'auto_login_flag': auto_login_flag,
-            'nickname': nickname,
-        }
         return self.render_template('base.html', context=context)
 
 class FeedHandler(JSONMessageHandler):
