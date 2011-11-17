@@ -162,8 +162,8 @@ class FeedHandler(JSONMessageHandler):
         except:
             return self.render()
 
-        nickname = self.get_argument('nickname')
-        message = self.get_argument('message')
+        nickname = unquote(self.get_argument('nickname'))
+        message = unquote(self.get_argument('message'))
         print "%s: %s" % (nickname, message)
         chat_message = ChatMessage(**{'nickname': nickname, 'message': message})
 

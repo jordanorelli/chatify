@@ -146,7 +146,7 @@ var Chat = (function($) {
     $composeMessageField.blur();
     $composeMessageField.attr("disabled", "disabled");
 
-    data = 'nickname=' + username + '&message=' + message;
+    data = 'nickname=' + escape(username) + '&message=' + escape(message);
 
     $.post('/feed', data)
       .success( function(){
