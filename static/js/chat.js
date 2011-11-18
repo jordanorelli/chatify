@@ -61,9 +61,9 @@ var Chat = (function($) {
       cache: false,
       timeout: 5000,
       success: function(data){
-        username = sanitize(desiredUsername);
+        username = desiredUsername;
         loggedIn = true;
-        $usernameDisplay.html(username);
+        $usernameDisplay.text(username);
         setChatDisplay(true);
         $loginErrors.toggle(false);
         $composeMessageField.focus();

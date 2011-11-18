@@ -37,7 +37,11 @@ def add_message(chat_message, chat_messages_list):
     new_message_event.set()
     new_message_event.clear()
 
-
+def print_list(my_list):
+    my_i=''
+    for i in my_list:
+        my_i += i.nickname
+    return my_i
 def get_messages(chat_messages_list, since_timestamp=0):
     """get new messages since a certain timestamp"""
     return filter(lambda x: x.timestamp > since_timestamp,
@@ -48,13 +52,18 @@ def add_user(user, users_online_list):
     users_online_list.append(user)
 
 def remove_user(user, users_list):
-    users_list.remove(user)
+    """remove a user from a list"""
+    for i in range(len(users_list)):
+        if users_list[i].nickname == user.nickname:
+            del users_list[i]
+            break
 
 def timestamp_active_user(nickname, target_list):
     """updates the timestamp on the user to avoid expiration"""
     user = find_list_item_by_nickname(nickname, target_list)
     if user != None:
         user.timestamp = int(time.time() * 1000)
+
     return user
 
 def find_list_item_by_nickname(nickname, target_list):
@@ -69,8 +78,6 @@ def find_list_item_by_nickname(nickname, target_list):
 def check_users_online(users_list, chat_messages_list):
     """check for expired users and send a message they left the room"""
     since_timestamp = (time.time() * 1000) - (USER_TIMEOUT * 1000)
-
-    print "checking online users to purge expired"
 
     users = filter(lambda x: x.timestamp <= since_timestamp,
                    users_list)
@@ -119,11 +126,9 @@ class ChatifyJSONMessageHandler(JSONMessageHandler):
         try:
             nickname = self.get_argument('nickname')
             self.current_user = timestamp_active_user(nickname, users_online)
-            logging.info("current user nickname is %s" % self.current_user.nickname)
 
         except:
             self.current_user = None
-            logging.info("No current user found")
 
     def get_current_user(self):
         """return  self.current_user set in self.prepare()"""
@@ -168,7 +173,7 @@ class FeedHandler(ChatifyJSONMessageHandler):
 
         nickname = unquote(self.get_argument('nickname'))
         message = unquote(self.get_argument('message'))
-        print "%s: %s" % (nickname, message)
+        logging.info("%s: %s" % (nickname, message))
         chat_message = ChatMessage(**{'nickname': nickname, 'message': message})
 
         try:
