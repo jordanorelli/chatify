@@ -30,11 +30,13 @@ var Chat = (function($) {
   // Replaces newlines with the <br /> element
   // replaces tabs with 2-spaces
   // replaces leading spaces with non-breaking spaces
+  // replaces url's with active links (open a new window)
   var format = function(text) {
     return text.replace(/^\t*/, "&nbsp;&nbsp;")
     .replace(/\r\n/g, "<br/>")
     .replace(/\n/g, "<br/>")
-    .replace(/\s/g, "&nbsp;");
+    .replace(/\s/g, "&nbsp;")
+    .replace(/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/i, '<a href="$1" target="_blank">$1</a>');
   }
 
 
