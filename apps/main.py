@@ -29,15 +29,19 @@ except Exception:
 ## hold our messages in memory here, limit to last 50
 ## persistance is handled by redis, or not at all
 LIST_SIZE = 50
-users_online = []
-chat_messages = []
+users_online = [] # not used at all if we have redis
+chat_messages = [] # still user as a local instance buffer if we have redis
 new_message_event = Event()
 
 ## Our long polling interval
-POLLING_INTERVAL = 30
+POLLING_INTERVAL = 15
+
+## Our users check interval
+USER_TIMEOUT_INTERVAL = 30
 
 ## How old a user must be in seconds to kick them out of the room
 USER_TIMEOUT = 60
+
 ##
 ## our redis channel listeners
 ##
@@ -49,9 +53,10 @@ def redis_new_chat_messages_listener(redis_server):
         ## just hook into our existing way for now
         ## a bit redundant but allows server to be run without redis
         logging.info("new chat message subscribed to: %s" % msg['data'])
+        ## add o our local buffer to push to clients
         list_add_chat_message(ChatMessage(**json.loads(msg['data'])), chat_messages)
 
-# we  don't need this anymore since we use expire on the user key
+## we don't use these since there is no advantage to storing users locally when using redis
 #def redis_new_users_listener(redis_server):
 #    """listen to redis for when new users are published"""
 #    while True:
@@ -61,7 +66,6 @@ def redis_new_chat_messages_listener(redis_server):
 #        logging.info("new user subscribed to: %s" % msg['data'])
 #        list_add_user(User(**json.loads(msg['data'])), users_online)
 
-# we don't need this anymore since we use expire on the user key
 #def redis_remove_users_listener(redis_server):
 #    """listen to redis for when remove user messages are published"""
 #    while True:
@@ -71,7 +75,6 @@ def redis_new_chat_messages_listener(redis_server):
 #        logging.info("new remove message subscribed to: %s" % msg['data'])
 #        list_remove_user(User(**json.loads(msg['data'])), users_online)
 
-# we don't need this anymore since we use expire on the user key
 #def redis_update_users_timestamp_listener(redis_server):
 #    """listen to redis for when updated users timestamp are published"""
 #    while True:
@@ -109,7 +112,7 @@ def redis_add_chat_message(chat_message, redis_server):
     data = chat_message.to_json()
     logging.info(data)
 
-    redis_server.rpush('add_chat_messages', data)
+    redis_server.rpush('chat_messages', data)
     redis_server.publish('add_chat_messages', data)
 
 def get_messages(chat_messages_list, since_timestamp=0):
@@ -138,14 +141,11 @@ def redis_add_user(user, redis_server):
 
     data = user.to_json()
     logging.info(data)
-
-    #no more record for tiemstamp, expire key instead
     # add our nickname to a set orderes by timestamp to be able to quickly purge
-    # redis_server.zadd("user_timestamps",user.nickname, user.timestamp)
+    redis_server.zadd("users_timestamp",user.nickname, user.timestamp)
     # add our user object to a simple set, keyed by nickname
     redis_server.set('users:%s' % user.nickname, data)
-    redis_server.expire('users:%s' % user.nickname, USER_TIMEOUT)
-    # no longer needed, not in memory anymore i using redis
+    ## we no longeer care about updating users information in this or other chatify instances
     # publish our new user
     #redis_server.publish('add_users', data)
     #logging.info("new user added and published: %s" % data)
@@ -173,14 +173,14 @@ def redis_remove_user(user, redis_server):
 
     data = user.to_json()
     logging.info(data)
-    # no more timestamp record
     # remove our users timestamp
-    # affected = redis_server.zrem('user_timestamps',user.nickname)
-    # logging.info("removed user timestamp(%d): %s" % (affected, user.nickname))
+    affected = redis_server.zrem('users_timestamp',user.nickname)
+    logging.info("removed user timestamp(%d): %s" % (affected, user.nickname))
     # remove our user 
     affected = redis_server.expire('users:%s' % user.nickname, 0)
     logging.info("removed user(%d): %s" % (affected, data))
-    redis_server.publish('remove_users', data)
+    ## we no longeer care about updating users information in this or other chatify instances
+    #redis_server.publish('remove_users', data)
 
 ##
 ## Update our users timestamp methods
@@ -200,21 +200,20 @@ def list_update_user_timestamp(user, target_list):
     usr = find_user_by_nickname(user.nickname)
     if usr != None:
         usr.timestamp = user.timestamp
+
     return usr
 
 def redis_update_user_timestamp(user, redis_server):
     """timestamps our active user and publishes the changes"""
     data = user.to_json()
-    #logging.info("updating users timestamp: %s" % data)
-    logging.info("updating users key expiration(%d): %s" % (USER_TIMEOUT, user.nickname))
-    redis_server.expire("users:%s" % user.nickname, USER_TIMEOUT)
-    # why bother with any of this, just update expiration above
+    logging.info("updating users timestamp: %s" % data)
     # update our timestamp ordered set
-    # redis_server.zadd("update_users_timestamp", user.nickname, user.timestamp)
+    redis_server.zadd("users_timestamp", user.nickname, user.timestamp)
     # update the object ourself
-    # redis_server.set("users:%s" % user.nickname, data)
+    redis_server.set("users:%s" % user.nickname, data)
+    ## we no longeer care about updating users information in this or other chatify instances
     # publish
-    # redis_server.publish("update_users_timestamp", data)
+    #redis_server.publish("update_users_timestamp", data)
     return user
 
 def find_user_by_nickname(nickname):
@@ -225,35 +224,26 @@ def find_user_by_nickname(nickname):
         user = list_find_user_by_nickname(nickname, users_online)
     return user
 
-def list_find_user_by_nickname(nickname, target_list):
+def list_find_user_by_nickname(nickname, user_list):
     """returns the first list item matching a nickname"""
-    items = filter(lambda x: x.nickname == nickname,
-                   target_list)
-    if len(items)==0:
+    users = filter(lambda x: x.nickname == nickname,
+                   user_list)
+    if len(users)==0:
         return None
     else:
-        return items[0]
+        return users[0]
 
 def redis_find_user_by_nickname(nickname, redis_server):
     """returns the user by nickname"""
-    data = redis_server.get("users:%s" % nickname)
-    logging.info(data)
+    key = "users:%s" % nickname
+    data = redis_server.get(key)
+    
     if data != None:
-        logging.info("found user by nickname: %s" % data)
+        logging.info("found user by nickname (%s):  %s" % (key, data))
         return User(**json.loads(data))
     else:
-        logging.info("unable to find user by nickname: %s" % nickname)
+        logging.info("unable to find user by nickname: (%s): '%s'" % (key, nickname))
         return None
-
-def list_find_user_by_nickname(nickname, users_list):
-    """returns the first list item matching a nickname"""
-    items = filter(lambda x: x.nickname == nickname,
-                   users_list)
-    if len(items)>0:
-        user = items[0]
-    else:
-        user = None
-    return user
 
 ##
 ## Check online user methods
@@ -262,17 +252,17 @@ def list_find_user_by_nickname(nickname, users_list):
 def check_users_online():
     """check for expired users and send a message they left the room"""
     before_timestamp = int((time.time()) - (USER_TIMEOUT))
+    
+    logging.info("checking users online, purging before %s" % before_timestamp)
 
     if using_redis:
-        # we let the user expire by key if using redis
-        pass
-        #redis_check_users_online(before_timestamp, redis_server)
+        redis_check_users_online(before_timestamp, redis_server)
     else:
         list_check_users-online(before_timestamp, users_online)
 
     ## setup our next check
     g = Greenlet(check_users_online)
-    g.start_later(POLLING_INTERVAL)
+    g.start_later(USER_TIMEOUT_INTERVAL)
 
 def list_check_users_online(before_timestamp, users_list):
     """check for expired users and send a message they left the room"""
@@ -286,14 +276,23 @@ def list_check_users_online(before_timestamp, users_list):
 
 def redis_check_users_online(before_timestamp, redis_server):
     """check for expired users and send a message they left the room"""
-    expired_users = redis_server.zrange("user_timestamps",0, before_timestamp)
+    expired_users_count = redis_server.zcount("users_timestamp",0,before_timestamp)
+    expired_users = redis_server.zrange("users_timestamp",0, expired_users_count)
+    if expired_users != None:
+        for nickname in expired_users:
+            key="users:%s" % nickname
+            data = redis_server.get(key)
+            if data != None:
+                user = User(**json.loads(data))
+                msg = ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname);
+                add_chat_message(msg)
+                remove_user(user)
+            else:
+                logging.info("unable to find expired user for nickname (%s): %s" % (key,nickname))
 
-    for nickname in expired_users:
-        user = User(**json.loads(redis_server.get("users:%s" % nickname)))
-        msg = ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname);
-
-        add_chat_message(msg)
-        remove_user(user)
+##
+## Our dictshield class defintions
+##
 
 class User(Document):
     """a chat user"""
@@ -306,7 +305,7 @@ class User(Document):
         self.timestamp = int(time.time())
 
 class ChatMessage(EmbeddedDocument):
-    """A single message"""
+    """A single chat message"""
     timestamp = fields.IntField(required=True)
     nickname = fields.StringField(required=True, max_length=40)
     message = fields.StringField(required=True)
@@ -317,6 +316,10 @@ class ChatMessage(EmbeddedDocument):
         super(ChatMessage, self).__init__(*args, **kwargs)
         self.timestamp = int(time.time() * 1000)
 
+##
+## Our handler class definitions
+##
+
 class ChatifyHandler(Jinja2Rendering):
     """Renders the chat interface template."""
 
@@ -325,10 +328,9 @@ class ChatifyHandler(Jinja2Rendering):
 
 class ChatifyJSONMessageHandler(JSONMessageHandler):
     """our JSON message handlers base class"""
-
     def prepare(self):
         """get our user from the request and set to self.current_user"""
-
+        self.current_user = None
         try:
             nickname = self.get_argument('nickname')
             user = find_user_by_nickname(nickname)
@@ -336,7 +338,7 @@ class ChatifyJSONMessageHandler(JSONMessageHandler):
                 self.current_user = update_user_timestamp(user)
 
         except Exception:
-            self.current_user = None
+            None
 
     def get_current_user(self):
         """return  self.current_user set in self.prepare()"""
@@ -456,36 +458,47 @@ class LoginHandler(ChatifyJSONMessageHandler):
         self.convert_cookies()
         return self.render()
 
-project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-template_dir = os.path.join(project_dir, 'templates')
-
-config = {
-    'mongrel2_pair': ('ipc://run/mongrel2_send', 'ipc://run/mongrel2_recv'),
-    'handler_tuples': [
-        (r'^/$', ChatifyHandler),
-        (r'^/feed$', FeedHandler),
-        (r'^/login/(?P<nickname>.+)$', LoginHandler),
-    ],
-    'cookie_secret': '1a^O9s$4clq#09AlOO1!',
-    'template_loader': load_jinja2_env(template_dir),
-}
-
-
-app = Brubeck(**config)
 ## this allows us to import the demo as a module for unit tests without running the server
 if __name__ == "__main__":
+   ##
+   ## runtime configuration
+   ##
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    template_dir = os.path.join(project_dir, 'templates')
+
+    config = {
+        'mongrel2_pair': ('ipc://run/mongrel2_send', 'ipc://run/mongrel2_recv'),
+        'handler_tuples': [
+            (r'^/$', ChatifyHandler),
+            (r'^/feed$', FeedHandler),
+            (r'^/login/(?P<nickname>.+)$', LoginHandler),
+        ],
+        'cookie_secret': '1a^O9s$4clq#09AlOO1!',
+        'template_loader': load_jinja2_env(template_dir),
+        'enforce_using_redis': False, # This should be true in production 
+    }
+
+
+    ##
+    ## get us started!
+    ##
+
+    app = Brubeck(**config)
 
     if using_redis:
+        """try to use redis if possible. Only required for persistance across instance restarts and using more than one instance to handle requests.
+           Yeah, so you should REALLY use redis in production.
+        """
         try:
             ## attach to our redis server
-            ## we do all the setup here, so if we fail our flag is set properly
+            ## we do all the setup here, so if we fail at anything our flag is set properly right away and we only use in memory buffer from the start            
             redis_server = redis.Redis(host='localhost', port=6379, db=0)
             
             redis_client1 = redis_server.pubsub()
             redis_client1.subscribe('add_chat_messages')
             redis_new_chat_messages = redis_client1.listen()
 
-            #no more in memory buffer for users if we are using redis
+            ## we don't need these when storing in redis, no advantage to storing users locally
             #redis_client2 = redis_server.pubsub()
             #redis_client2.subscribe('add_users')
             #redis_new_users = redis_client2.listen()
@@ -510,7 +523,7 @@ if __name__ == "__main__":
             except Exception, e:
                 logging.info("failed to load messages from redis: %s" % e)
 
-            # No more local user with redis
+            ## we don't need this when using redis, no advantage to storing users locally
             #try:
             #    ## fill the in memory buffer with redis data here
             #    user_keys = redis_server.keys("users:*")
@@ -528,7 +541,7 @@ if __name__ == "__main__":
             g1 = Greenlet(redis_new_chat_messages_listener, redis_server)
             g1.start()
 
-            ## we don't really need these, we are suing redis soley for users
+            ## we don't need theses when using redis, no advantage to store users locally
             ## spawn out the process to listen for new messages in redis
             #g2 = Greenlet(redis_new_users_listener, redis_server)
             #g2.start()
@@ -546,12 +559,15 @@ if __name__ == "__main__":
             using_redis = False
             logging.info("unable to connect to redis, make sure it is running (single instance mode: using in memory buffer)")
 
-
+    ## if we are not using redis, but said we should, stop everything!
+    if using_redis == False and app.config.enforce_using_redis == True:
+        raise Exception("Y U no use Redis?") 
     ## spawn out online user checker to timeout users after inactivity
-    ## only if not using redis (really online_users should be ignored everywhere)
-    if using_redis == False:
-        g = Greenlet(check_users_online)
-        g.start_later(POLLING_INTERVAL)
+    ## if there is more than one instance, this will still run in every instance
+    ## that is probably not a very good thing we should deal with eventually
+    ## maybe publish a "last_online_user_check" message allowing each instance to only really process if needed?
+    g = Greenlet(check_users_online)
+    g.start()
 
     ## start our server to handle requests
     app.run()
