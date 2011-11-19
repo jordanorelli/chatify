@@ -13,7 +13,19 @@ from gevent import Greenlet
 import functools
 import logging
 
-## hold our messages in memory here, limit to last 20
+## add redis support if available
+## without redis only a single instance can be run
+using_redis = False
+try:
+    import redis
+    import json
+    using_redis = True
+except Exception:
+    logging.info("redis module not found (single instance mode: using in memory buffer)")
+    pass
+
+
+## hold our messages in memory here, limit to last 50
 LIST_SIZE = 50
 users_online = []
 chat_messages = []
@@ -25,7 +37,13 @@ POLLING_INTERVAL = 30
 ## How old a user must be in seconds to kick them out of the room
 USER_TIMEOUT = 60
 
-def add_message(chat_message, chat_messages_list):
+def add_message(message):
+    if using_redis:
+        redis_add_message(message, redis_server)
+    else:
+        list_add_message(message, chat_messages)
+
+def list_add_message(chat_message, chat_messages_list):
     """Adds a message to our message history. A server timestamp is used to
     avoid sending duplicates."""
     chat_messages_list.append(chat_message)
@@ -37,6 +55,41 @@ def add_message(chat_message, chat_messages_list):
     new_message_event.set()
     new_message_event.clear()
 
+
+def redis_add_message(chat_message, redis_server):
+    """adds a message to the redis server"""
+    logging.info(chat_message.to_json())
+    data = chat_message.to_json()
+    redis_server.rpush('chat_messages', data)
+    redis_server.publish('chat_messages', data)
+
+def redis_new_chat_messages_listener(redis_server):
+    """listen to redis for when new messages are published"""
+    while True:
+        msg = redis_new_chat_messages.next()
+        ## just hook into our existing way for now
+        ## a bit redundant but allows server to be run without redis
+        logging.info(msg['data'])
+        list_add_message(ChatMessage(**json.loads(msg['data'])), chat_messages)
+        
+def redis_new_users_listener(redis_server):
+    """listen to redis for when new users are published"""
+    while True:
+        msg = redis_new_users.next()
+        ## just hook into our existing way for now
+        ## a bit redundant but allows server to be run without redis
+        logging.info(msg['data'])
+        list_add_message(ChatMessage(**json.loads(msg['data'])), chat_messages)
+
+def redis_remove_users_listener(redis_server):
+    """listen to redis for when delete user messages are published"""
+    while True:
+        msg = redis_remove_users.next()
+        ## just hook into our existing way for now
+        ## a bit redundant but allows server to be run without redis
+        logging.info(msg['data'])
+        list_add_message(ChatMessage(**json.loads(msg['data'])), chat_messages)
+
 def print_list(my_list):
     my_i=''
     for i in my_list:
@@ -47,11 +100,13 @@ def get_messages(chat_messages_list, since_timestamp=0):
     return filter(lambda x: x.timestamp > since_timestamp,
                   chat_messages)
 
-def add_user(user, users_online_list):
+    
+
+def list_add_user(user, users_online_list):
     """add a user to our online users. Timestamp used to determine freshness"""
     users_online_list.append(user)
 
-def remove_user(user, users_list):
+def list_remove_user(user, users_list):
     """remove a user from a list"""
     for i in range(len(users_list)):
         if users_list[i].nickname == user.nickname:
@@ -82,8 +137,9 @@ def check_users_online(users_list, chat_messages_list):
     users = filter(lambda x: x.timestamp <= since_timestamp,
                    users_list)
     for user in users:
-        add_message(ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname),
-                    chat_messages_list)
+        msg = ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname);
+
+        add_message(msg, redis_server)
         remove_user(user, users_online)
 
     ## setup our next check
@@ -174,11 +230,11 @@ class FeedHandler(ChatifyJSONMessageHandler):
         nickname = unquote(self.get_argument('nickname'))
         message = unquote(self.get_argument('message'))
         logging.info("%s: %s" % (nickname, message))
-        chat_message = ChatMessage(**{'nickname': nickname, 'message': message})
+        msg = ChatMessage(**{'nickname': nickname, 'message': message})
 
         try:
-            chat_message.validate()
-            add_message(chat_message, chat_messages)
+            msg.validate()
+            add_message(msg)
 
             self.set_status(200);
             self.add_to_payload('message','message sent')
@@ -200,8 +256,9 @@ class LoginHandler(ChatifyJSONMessageHandler):
                 user=add_user(User(nickname=nickname), users_online)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
                     message="%s has entered the room" % nickname, msgtype='system')
-                add_message(msg, chat_messages)
-
+                
+                add_message(msg)
+                
                 ## respond to the client our success
                 self.set_status(200)
                 self.set_cookie('nickname',nickname)
@@ -230,7 +287,8 @@ class LoginHandler(ChatifyJSONMessageHandler):
                 remove_user(user, users_online)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
                    message='%s has left the room.' % nickname, msgtype='system')
-                add_message(msg, chat_messages)
+
+                add_message(msg)
 
                 ## respond to the client our success
                 self.set_status(200)
@@ -265,9 +323,57 @@ app = Brubeck(**config)
 ## this allows us to import the demo as a module for unit tests without running the server
 if __name__ == "__main__":
 
+    if using_redis:
+        try:
+            ## attach to our redis server
+            ## we do all the setup here, so if we fail our flag is set properly
+            redis_server = redis.Redis(host='localhost', port=6379, db=0)
+            
+            redis_client1 = redis_server.pubsub()
+            redis_client1.subscribe('chat_messages')
+            redis_new_chat_messages = redis_client1.listen()
+
+            redis_client2 = redis_server.pubsub()
+            redis_client2.subscribe('chat_messages')
+            redis_new_users = redis_client2.listen()
+
+            redis_client3 = redis_server.pubsub()
+            redis_client3.subscribe('chat_messages')
+            redis_remove_users = redis_client3.listen()
+
+            logging.info("succesfully connected to redis")
+            try:
+                ## fill the in memory buffer with redis data here
+                msgs = redis_server.lrange("chat_messages", -1 * LIST_SIZE, -1)
+                i = 0
+                for msg in msgs:
+                    chat_messages.append(ChatMessage(**json.loads(msg)))
+                    i += 1
+                logging.info("loaded chat_messages memory buffer (%d)" % i)
+            except Exception, e:
+                logging.info("failed to load messages from redis: %s" % e)
+                
+            ## spawn out the process to listen for new messages in redis
+            g1 = Greenlet(redis_new_chat_messages_listener, redis_server)
+            g1.start()
+
+            ## spawn out the process to listen for new messages in redis
+            g2 = Greenlet(redis_new_users_listener, redis_server)
+            g2.start()
+
+            ## spawn out the process to listen for new messages in redis
+            g3 = Greenlet(redis_remove_users_listener, redis_server)
+            g3.start()
+
+            logging.info("started redis listener")
+        except Exception:
+            using_redis = False
+            logging.info("unable to connect to redis, make sure it is running (single instance mode: using in memory buffer)")
+
+
     ## spawn out online user checker to timeout users after inactivity
     g = Greenlet(check_users_online, users_online, chat_messages)
     g.start_later(POLLING_INTERVAL)
-    
+
     ## start our server to handle requests
     app.run()
