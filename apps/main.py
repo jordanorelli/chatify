@@ -31,7 +31,7 @@ except Exception:
 LIST_SIZE = 50
 users_online = [] # not used at all if we have redis
 chat_messages = [] # still user as a local instance buffer if we have redis
-new_message_event = Event()
+new_message_events = {}
 
 ## Our long polling interval
 POLLING_INTERVAL = 15
@@ -76,8 +76,10 @@ def list_add_chat_message(chat_message, chat_messages_list):
         chat_messages_list.pop(0)
 
     # alert our polling clients
-    new_message_event.set()
-    new_message_event.clear()
+    e = new_message_events.get(chat_message.channel)
+    if e:
+        e.set()
+        e.clear()
 
 def redis_add_chat_message(chat_message, redis_server):
     """adds a message to the redis server and publishes it"""
@@ -279,6 +281,7 @@ class ChatMessage(EmbeddedDocument):
     message = fields.StringField(required=True)
     msgtype = fields.StringField(default='user',
                           choices=['user', 'error', 'system'])
+    channel = fields.StringField(required=True, max_length=30)
 
     def __init__(self, *args, **kwargs):
         super(ChatMessage, self).__init__(*args, **kwargs)
@@ -301,9 +304,10 @@ class ChatifyJSONMessageHandler(JSONMessageHandler):
         self.current_user = None
         try:
             nickname = self.get_argument('nickname')
+            self.channel = self.get_argument('channel', 'public')
             user = find_user_by_nickname(nickname)
-	    if user != None:
-                self.current_user = update_user_timestamp(user)
+            if user != None:
+                    self.current_user = update_user_timestamp(user)
 
         except Exception:
             None
@@ -335,7 +339,10 @@ class FeedHandler(ChatifyJSONMessageHandler):
 
         if len(messages)==0:
             # we don't have any messages so sleep for a bit
-            new_message_event.wait(POLLING_INTERVAL)
+
+            if self.channel not in new_message_events:
+                new_message_events[self.channel] = Event()
+            new_message_events[self.channel].wait(POLLING_INTERVAL)
 
             # done sleeping or woken up
             #check again and return response regardless
@@ -352,7 +359,8 @@ class FeedHandler(ChatifyJSONMessageHandler):
         nickname = unquote(self.get_argument('nickname'))
         message = unquote(self.get_argument('message'))
         logging.info("%s: %s" % (nickname, message))
-        msg = ChatMessage(**{'nickname': nickname, 'message': message})
+        msg = ChatMessage(**{'nickname': nickname, 'message': message,
+                             'channel': self.channel})
 
         try:
             msg.validate()
