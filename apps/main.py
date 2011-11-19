@@ -1,17 +1,17 @@
 #!/usr/bin/env python
+from brubeck.auth import authenticated
 from brubeck.request_handling import Brubeck, JSONMessageHandler
 from brubeck.templating import load_jinja2_env, Jinja2Rendering
-from brubeck.auth import authenticated
 from dictshield import fields
 from dictshield.document import Document
 from dictshield.fields import EmbeddedDocument, ShieldException
+from gevent import Greenlet
 from gevent.event import Event
 from urllib import unquote
-import os
-import time
-from gevent import Greenlet
 import functools
 import logging
+import os
+import time
 
 ## add redis support if available
 ## redis also handles persistance and synching all brubeck chatify instances
@@ -55,34 +55,6 @@ def redis_new_chat_messages_listener(redis_server):
         logging.info("new chat message subscribed to: %s" % msg['data'])
         ## add o our local buffer to push to clients
         list_add_chat_message(ChatMessage(**json.loads(msg['data'])), chat_messages)
-
-## we don't use these since there is no advantage to storing users locally when using redis
-#def redis_new_users_listener(redis_server):
-#    """listen to redis for when new users are published"""
-#    while True:
-#        msg = redis_new_users.next()
-#        ## just hook into our existing way for now
-#        ## a bit redundant but allows server to be run without redis
-#        logging.info("new user subscribed to: %s" % msg['data'])
-#        list_add_user(User(**json.loads(msg['data'])), users_online)
-
-#def redis_remove_users_listener(redis_server):
-#    """listen to redis for when remove user messages are published"""
-#    while True:
-#        msg = redis_remove_users.next()
-#        ## just hook into our existing way for now
-#        ## a bit redundant but allows server to be run without redis
-#        logging.info("new remove message subscribed to: %s" % msg['data'])
-#        list_remove_user(User(**json.loads(msg['data'])), users_online)
-
-#def redis_update_users_timestamp_listener(redis_server):
-#    """listen to redis for when updated users timestamp are published"""
-#    while True:
-#        msg = redis_update_users_timestamp.next()
-#        ## just hook into our existing way for now
-#        ## a bit redundant but allows server to be run without redis
-#        logging.info("new update user timestamp subscribed to: %s" % msg['data'])
-#        list_update_user_timestamp(User(**json.loads(msg['data'])), users_online)
 
 ##
 ## Methods to add a chat message
@@ -147,8 +119,6 @@ def redis_add_user(user, redis_server):
     redis_server.set('users:%s' % user.nickname, data)
     ## we no longeer care about updating users information in this or other chatify instances
     # publish our new user
-    #redis_server.publish('add_users', data)
-    #logging.info("new user added and published: %s" % data)
 
 ##
 ## Methods to remove a user
@@ -180,7 +150,6 @@ def redis_remove_user(user, redis_server):
     affected = redis_server.expire('users:%s' % user.nickname, 0)
     logging.info("removed user(%d): %s" % (affected, data))
     ## we no longeer care about updating users information in this or other chatify instances
-    #redis_server.publish('remove_users', data)
 
 ##
 ## Update our users timestamp methods
@@ -213,7 +182,6 @@ def redis_update_user_timestamp(user, redis_server):
     redis_server.set("users:%s" % user.nickname, data)
     ## we no longeer care about updating users information in this or other chatify instances
     # publish
-    #redis_server.publish("update_users_timestamp", data)
     return user
 
 def find_user_by_nickname(nickname):
@@ -237,7 +205,7 @@ def redis_find_user_by_nickname(nickname, redis_server):
     """returns the user by nickname"""
     key = "users:%s" % nickname
     data = redis_server.get(key)
-    
+
     if data != None:
         logging.info("found user by nickname (%s):  %s" % (key, data))
         return User(**json.loads(data))
@@ -252,7 +220,7 @@ def redis_find_user_by_nickname(nickname, redis_server):
 def check_users_online():
     """check for expired users and send a message they left the room"""
     before_timestamp = int((time.time()) - (USER_TIMEOUT))
-    
+
     logging.info("checking users online, purging before %s" % before_timestamp)
 
     if using_redis:
@@ -410,9 +378,9 @@ class LoginHandler(ChatifyJSONMessageHandler):
                 user=add_user(User(nickname=nickname))
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
                     message="%s has entered the room" % nickname, msgtype='system')
-                
+
                 add_chat_message(msg)
-                
+
                 ## respond to the client our success
                 self.set_status(200)
                 self.set_cookie('nickname',nickname)
@@ -493,23 +461,10 @@ if __name__ == "__main__":
             ## attach to our redis server
             ## we do all the setup here, so if we fail at anything our flag is set properly right away and we only use in memory buffer from the start            
             redis_server = redis.Redis(host='localhost', port=6379, db=0)
-            
+
             redis_client1 = redis_server.pubsub()
             redis_client1.subscribe('add_chat_messages')
             redis_new_chat_messages = redis_client1.listen()
-
-            ## we don't need these when storing in redis, no advantage to storing users locally
-            #redis_client2 = redis_server.pubsub()
-            #redis_client2.subscribe('add_users')
-            #redis_new_users = redis_client2.listen()
-
-            #redis_client3 = redis_server.pubsub()
-            #redis_client3.subscribe('remove_users')
-            #redis_remove_users = redis_client3.listen()
-
-            #redis_client4 = redis_server.pubsub()
-            #redis_client4.subscribe('update_users_timestamp')
-            #redis_update_users_timestamp = redis_client4.listen()
 
             logging.info("succesfully connected to redis")
             try:
@@ -523,38 +478,12 @@ if __name__ == "__main__":
             except Exception, e:
                 logging.info("failed to load messages from redis: %s" % e)
 
-            ## we don't need this when using redis, no advantage to storing users locally
-            #try:
-            #    ## fill the in memory buffer with redis data here
-            #    user_keys = redis_server.keys("users:*")
-            #    i = 0
-            #    for user_key in user_keys:
-            #        usr = redis_server.get(user_key)
-            #        users_online.append(User(**json.loads(usr)))
-            #        i += 1
-            #    logging.info("loaded users_online memory buffer (%d)" % i)
-            #except Exception, e:
-            #    logging.info("failed to users_online from redis: %s" % e)
 
-                
             ## spawn out the process to listen for new messages in redis
             g1 = Greenlet(redis_new_chat_messages_listener, redis_server)
             g1.start()
-
-            ## we don't need theses when using redis, no advantage to store users locally
-            ## spawn out the process to listen for new messages in redis
-            #g2 = Greenlet(redis_new_users_listener, redis_server)
-            #g2.start()
-
-            ## spawn out the process to listen for new messages in redis
-            #g3 = Greenlet(redis_remove_users_listener, redis_server)
-            #g3.start()
-
-            ## spawn out the process to listen for new messages in redis
-            #g4 = Greenlet(redis_update_users_timestamp_listener, redis_server)
-            #g4.start()
-
             logging.info("started redis listener")
+
         except Exception:
             using_redis = False
             logging.info("unable to connect to redis, make sure it is running (single instance mode: using in memory buffer)")
