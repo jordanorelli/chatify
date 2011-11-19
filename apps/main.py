@@ -13,6 +13,8 @@ import logging
 import os
 import time
 
+logging.basicConfig(level=logging.DEBUG)
+
 ## add redis support if available
 ## redis also handles persistance and synching all brubeck chatify instances
 ## without redis only a single instance can be run
@@ -50,16 +52,19 @@ USER_TIMEOUT = 60
 def get_message_queue(channel_name):
     if channel_name not in chat_message_queues:
         chat_message_queues[channel_name] = []
-    return chat_message_queues[channel_name]
+    queue = chat_message_queues[channel_name] 
+    logging.info("Found chat message queue %r with channeel name %s" % (queue, channel_name))
+    return queue
 
 def redis_new_chat_messages_listener(redis_server):
     """listen to redis for when new messages are published"""
+    logging.info("Spun up a redis chat message listener.")
     while True:
         raw = redis_new_chat_messages.next()
         msg = (ChatMessage(**json.loads(raw['data'])))
         ## just hook into our existing way for now
         ## a bit redundant but allows server to be run without redis
-        logging.info("new chat message subscribed to: %s" % msg['data'])
+        logging.info("new chat message subscribed to: %s" % raw['data'])
         ## add o our local buffer to push to clients
 
         list_add_chat_message(msg, get_message_queue(msg.channel))
@@ -187,7 +192,8 @@ def redis_update_user_timestamp(user, redis_server):
     data = user.to_json()
     logging.info("updating users timestamp: %s" % data)
     # update our timestamp ordered set
-    redis_server.zadd("users_timestamp", user.nickname, user.timestamp)
+    affected = redis_server.zadd("users_timestamp", user.nickname, user.timestamp)
+    logging.info("records changed: %d.  Username: %s" % (affected, user.nickname))
     # update the object ourself
     redis_server.set("users:%s" % user.nickname, data)
     ## we no longeer care about updating users information in this or other chatify instances
