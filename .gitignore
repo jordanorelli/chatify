@@ -1,3 +1,4 @@
 *.pyc
 *.swp
 the.db
+*.rdb
