@@ -53,7 +53,7 @@ def get_message_queue(channel_name):
     if channel_name not in chat_message_queues:
         chat_message_queues[channel_name] = []
     queue = chat_message_queues[channel_name] 
-    logging.info("Found chat message queue %r with channeel name %s" % (queue, channel_name))
+    logging.info("Found chat message queue %r with channel name %s" % (queue, channel_name))
     return queue
 
 def redis_new_chat_messages_listener(redis_server):
@@ -127,11 +127,14 @@ def redis_add_user(user, redis_server):
     """adds a user to the redis server and publishes it"""
 
     data = user.to_json()
-    logging.info(data)
+    logging.info("adding new user timestamp: %s" % data)
     # add our nickname to a set orderes by timestamp to be able to quickly purge
-    redis_server.zadd("users_timestamp",user.nickname, user.timestamp)
+    affected = redis_server.zadd("users_timestamp",user.nickname, user.timestamp)
+    logging.info("added new user timestamp(%s): %s:%s" % (affected, user.timestamp, user.nickname))
     # add our user object to a simple set, keyed by nickname
-    redis_server.set('users:%s' % user.nickname, data)
+    affected = redis_server.set('users:%s' % user.nickname, data)
+    logging.info("added new user (%s): %s" % (affected, data))
+
     ## we no longeer care about updating users information in this or other chatify instances
     # publish our new user
 
@@ -260,19 +263,22 @@ def list_check_users_online(before_timestamp, users_list):
 
 def redis_check_users_online(before_timestamp, redis_server):
     """check for expired users and send a message they left the room"""
+    logging.info("checking for users before: %s" % before_timestamp)    
     expired_users_count = redis_server.zcount("users_timestamp",0,before_timestamp)
-    expired_users = redis_server.zrange("users_timestamp",0, expired_users_count)
-    if expired_users != None:
-        for nickname in expired_users:
-            key="users:%s" % nickname
-            data = redis_server.get(key)
-            if data != None:
-                user = User(**json.loads(data))
-                msg = ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname);
-                add_chat_message(msg)
-                remove_user(user)
-            else:
-                logging.info("unable to find expired user for nickname (%s): %s" % (key,nickname))
+    logging.info("found %d users to expire" % expired_users_count)
+    if expired_users_count > 0:
+        expired_users = redis_server.zrange("users_timestamp",0, expired_users_count)
+        if expired_users != None:
+            for nickname in expired_users:
+                key="users:%s" % nickname
+                data = redis_server.get(key)
+                if data != None:
+                    user = User(**json.loads(data))
+                    msg = ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname);
+                    add_chat_message(msg)
+                    remove_user(user)
+                else:
+                    logging.info("unable to find expired user for nickname (%s): %s" % (key,nickname))
 
 ##
 ## Our dictshield class defintions
@@ -400,7 +406,7 @@ class LoginHandler(ChatifyJSONMessageHandler):
             if user == None :
                 user=add_user(User(nickname=nickname))
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
-                    message="%s has entered the room" % nickname, msgtype='system')
+                    message="%s has entered the room" % nickname, msgtype='system', channel=self.channel)
 
                 add_chat_message(msg)
 
@@ -431,7 +437,7 @@ class LoginHandler(ChatifyJSONMessageHandler):
             if user != None:
                 remove_user(user)
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
-                   message='%s has left the room.' % nickname, msgtype='system')
+                   message='%s has left the room.' % nickname, msgtype='system', channel=self.channel)
 
                 add_chat_message(msg)
 
