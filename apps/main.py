@@ -226,7 +226,7 @@ def check_users_online():
     if using_redis:
         redis_check_users_online(before_timestamp, redis_server)
     else:
-        list_check_users-online(before_timestamp, users_online)
+        list_check_users_online(before_timestamp, users_online)
 
     ## setup our next check
     g = Greenlet(check_users_online)
@@ -427,76 +427,76 @@ class LoginHandler(ChatifyJSONMessageHandler):
         return self.render()
 
 ## this allows us to import the demo as a module for unit tests without running the server
-if __name__ == "__main__":
-   ##
-   ## runtime configuration
-   ##
-    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    template_dir = os.path.join(project_dir, 'templates')
+##
+## runtime configuration
+##
+project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+template_dir = os.path.join(project_dir, 'templates')
 
-    config = {
-        'mongrel2_pair': ('ipc://run/mongrel2_send', 'ipc://run/mongrel2_recv'),
-        'handler_tuples': [
-            (r'^/$', ChatifyHandler),
-            (r'^/feed$', FeedHandler),
-            (r'^/login/(?P<nickname>.+)$', LoginHandler),
-        ],
-        'cookie_secret': '1a^O9s$4clq#09AlOO1!',
-        'template_loader': load_jinja2_env(template_dir),
-        'enforce_using_redis': False, # This should be true in production 
-    }
+config = {
+    'mongrel2_pair': ('ipc://run/mongrel2_send', 'ipc://run/mongrel2_recv'),
+    'handler_tuples': [
+        (r'^/$', ChatifyHandler),
+        (r'^/feed$', FeedHandler),
+        (r'^/login/(?P<nickname>.+)$', LoginHandler),
+    ],
+    'cookie_secret': '1a^O9s$4clq#09AlOO1!',
+    'template_loader': load_jinja2_env(template_dir),
+    'enforce_using_redis': False, # This should be true in production 
+}
 
 
-    ##
-    ## get us started!
-    ##
+##
+## get us started!
+##
 
-    app = Brubeck(**config)
 
-    if using_redis:
-        """try to use redis if possible. Only required for persistance across instance restarts and using more than one instance to handle requests.
-           Yeah, so you should REALLY use redis in production.
-        """
+app = Brubeck(**config)
+if using_redis:
+    """try to use redis if possible. Only required for persistance across instance restarts and using more than one instance to handle requests.
+       Yeah, so you should REALLY use redis in production.
+    """
+    try:
+        ## attach to our redis server
+        ## we do all the setup here, so if we fail at anything our flag is set properly right away and we only use in memory buffer from the start            
+        redis_server = redis.Redis(host='localhost', port=6379, db=0)
+
+        redis_client1 = redis_server.pubsub()
+        redis_client1.subscribe('add_chat_messages')
+        redis_new_chat_messages = redis_client1.listen()
+
+        logging.info("succesfully connected to redis")
         try:
-            ## attach to our redis server
-            ## we do all the setup here, so if we fail at anything our flag is set properly right away and we only use in memory buffer from the start            
-            redis_server = redis.Redis(host='localhost', port=6379, db=0)
-
-            redis_client1 = redis_server.pubsub()
-            redis_client1.subscribe('add_chat_messages')
-            redis_new_chat_messages = redis_client1.listen()
-
-            logging.info("succesfully connected to redis")
-            try:
-                ## fill the in memory buffer with redis data here
-                msgs = redis_server.lrange("chat_messages", -1 * LIST_SIZE, -1)
-                i = 0
-                for msg in msgs:
-                    chat_messages.append(ChatMessage(**json.loads(msg)))
-                    i += 1
-                logging.info("loaded chat_messages memory buffer (%d)" % i)
-            except Exception, e:
-                logging.info("failed to load messages from redis: %s" % e)
+            ## fill the in memory buffer with redis data here
+            msgs = redis_server.lrange("chat_messages", -1 * LIST_SIZE, -1)
+            i = 0
+            for msg in msgs:
+                chat_messages.append(ChatMessage(**json.loads(msg)))
+                i += 1
+            logging.info("loaded chat_messages memory buffer (%d)" % i)
+        except Exception, e:
+            logging.info("failed to load messages from redis: %s" % e)
 
 
-            ## spawn out the process to listen for new messages in redis
-            g1 = Greenlet(redis_new_chat_messages_listener, redis_server)
-            g1.start()
-            logging.info("started redis listener")
+        ## spawn out the process to listen for new messages in redis
+        g1 = Greenlet(redis_new_chat_messages_listener, redis_server)
+        g1.start()
+        logging.info("started redis listener")
 
-        except Exception:
-            using_redis = False
-            logging.info("unable to connect to redis, make sure it is running (single instance mode: using in memory buffer)")
+    except Exception:
+        using_redis = False
+        logging.info("unable to connect to redis, make sure it is running (single instance mode: using in memory buffer)")
 
-    ## if we are not using redis, but said we should, stop everything!
-    if using_redis == False and app.config.enforce_using_redis == True:
-        raise Exception("Y U no use Redis?") 
-    ## spawn out online user checker to timeout users after inactivity
-    ## if there is more than one instance, this will still run in every instance
-    ## that is probably not a very good thing we should deal with eventually
-    ## maybe publish a "last_online_user_check" message allowing each instance to only really process if needed?
-    g = Greenlet(check_users_online)
-    g.start()
+## if we are not using redis, but said we should, stop everything!
+if using_redis == False and config.get('enforce_using_redis') == True:
+    raise Exception("Y U no use Redis?") 
+## spawn out online user checker to timeout users after inactivity
+## if there is more than one instance, this will still run in every instance
+## that is probably not a very good thing we should deal with eventually
+## maybe publish a "last_online_user_check" message allowing each instance to only really process if needed?
+g = Greenlet(check_users_online)
+g.start()
 
-    ## start our server to handle requests
+## start our server to handle requests
+if __name__ == "__main__":
     app.run()
