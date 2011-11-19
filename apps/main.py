@@ -30,8 +30,9 @@ except Exception:
 ## persistance is handled by redis, or not at all
 LIST_SIZE = 50
 users_online = [] # not used at all if we have redis
-chat_messages = [] # still user as a local instance buffer if we have redis
+# chat_messages = [] # still user as a local instance buffer if we have redis
 new_message_events = {}
+chat_message_queues = {}
 
 ## Our long polling interval
 POLLING_INTERVAL = 15
@@ -46,15 +47,22 @@ USER_TIMEOUT = 60
 ## our redis channel listeners
 ##
 
+def get_message_queue(channel_name):
+    if channel_name not in chat_message_queues:
+        chat_message_queues[channel_name] = []
+    return chat_message_queues[channel_name]
+
 def redis_new_chat_messages_listener(redis_server):
     """listen to redis for when new messages are published"""
     while True:
-        msg = redis_new_chat_messages.next()
+        raw = redis_new_chat_messages.next()
+        msg = (ChatMessage(**json.loads(raw['data'])))
         ## just hook into our existing way for now
         ## a bit redundant but allows server to be run without redis
         logging.info("new chat message subscribed to: %s" % msg['data'])
         ## add o our local buffer to push to clients
-        list_add_chat_message(ChatMessage(**json.loads(msg['data'])), chat_messages)
+
+        list_add_chat_message(msg, get_message_queue(msg.channel))
 
 ##
 ## Methods to add a chat message
@@ -65,7 +73,7 @@ def add_chat_message(message):
     if using_redis:
         redis_add_chat_message(message, redis_server)
     else:
-        list_add_chat_message(message, chat_messages)
+        list_add_chat_message(message, get_message_queue(message.channel))
 
 def list_add_chat_message(chat_message, chat_messages_list):
     """Adds a message to our message history. A server timestamp is used to
@@ -92,7 +100,7 @@ def redis_add_chat_message(chat_message, redis_server):
 def get_messages(chat_messages_list, since_timestamp=0):
     """get new messages since a certain timestamp"""
     return filter(lambda x: x.timestamp > since_timestamp,
-                  chat_messages)
+                  chat_messages_list)
 
 ##
 ## Methods to add a user
@@ -324,10 +332,11 @@ class FeedHandler(ChatifyJSONMessageHandler):
         """checks for new messages"""
 
         try:
-            messages = get_messages(chat_messages, int(self.get_argument('since_timestamp', 0)))
+            queue = get_message_queue(self.channel)
+            messages = get_messages(queue, int(self.get_argument('since_timestamp', 0)))
 
         except ValueError as e:
-            messages = get_messages(chat_messages)
+            messages = get_messages(queue)
 
         return messages
 
@@ -479,7 +488,10 @@ if using_redis:
             msgs = redis_server.lrange("chat_messages", -1 * LIST_SIZE, -1)
             i = 0
             for msg in msgs:
-                chat_messages.append(ChatMessage(**json.loads(msg)))
+                message = ChatMessage(**json.loads(msg))
+                queue = get_message_queue(message.channel)
+                queue.append(message)
+
                 i += 1
             logging.info("loaded chat_messages memory buffer (%d)" % i)
         except Exception, e:
