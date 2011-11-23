@@ -36,7 +36,7 @@ var Chat = (function($) {
     .replace(/\r\n/g, "<br/>")
     .replace(/\n/g, "<br/>")
     .replace(/\s/g, "&nbsp;")
-    .replace(/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/i, '<a href="$1" target="_blank">$1</a>');
+    .replace(/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/g, '<a href="$1" target="_blank">$1</a>');
   }
 
 
@@ -153,7 +153,7 @@ var Chat = (function($) {
     $composeMessageField.blur();
     $composeMessageField.attr("disabled", "disabled");
 
-    data = 'nickname=' + escape(username) + '&message=' + escape(message);
+    data = 'nickname=' + username + '&message=' + message;
 
     $.post('/feed', data)
       .success( function(){

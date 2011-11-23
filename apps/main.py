@@ -285,6 +285,40 @@ def redis_check_users_online(before_timestamp, redis_server):
                 else:
                     logging.info("unable to find expired user for nickname (%s): %s" % (key,nickname))
 
+
+import re, htmlentitydefs
+
+#
+# Removes HTML or XML character references and entities from a text string.
+#
+# @param text The HTML (or XML) source text.
+# @return The plain text, as a Unicode string, if necessary.
+#
+# The things we do for unicode snowman support ...  
+#
+def unescape(text):
+    """unescapes HTML entities"""
+    def fixup(m):
+        text = m.group(0)
+        if text[:2] == "&#":
+            # character reference
+            try:
+                if text[:3] == "&#x":
+                    return unichr(int(text[3:-1], 16))
+                else:
+                    return unichr(int(text[2:-1]))
+            except ValueError:
+                pass
+        else:
+            # named entity
+            try:
+                text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+            except KeyError:
+                pass
+        return text # leave as is
+    return re.sub("&#?\w+;", fixup, text)
+
+
 ##
 ## Our dictshield class defintions
 ##
@@ -297,7 +331,7 @@ class User(Document):
 
     def __init__(self, *args, **kwargs):
         super(User, self).__init__(*args, **kwargs)
-        self.nickname = self.nickname.decode('utf8')
+        
         # seconds is enough here, we need an int
         self.timestamp = int(time.time())
 
@@ -329,15 +363,22 @@ class ChatifyJSONMessageHandler(JSONMessageHandler):
     def prepare(self):
         """get our user from the request and set to self.current_user"""
         self.current_user = None
+        nickname = None
         try:
             self.channel = self.get_argument('channel', 'public')
-            nickname = self.get_argument('nickname')
-            user = find_user_by_nickname(nickname)
-            if user != None:
+            try:
+                nickname = self.get_argument('nickname')
+            except Exception:
+                pass
+            if nickname != None:
+                print(nickname)
+                nickname = unescape(nickname)
+                user = find_user_by_nickname(nickname)
+                if user != None:
                     self.current_user = update_user_timestamp(user)
 
         except Exception:
-            pass
+            raise
 
     def get_current_user(self):
         """return  self.current_user set in self.prepare()"""
@@ -383,9 +424,10 @@ class FeedHandler(ChatifyJSONMessageHandler):
 
     @authenticated
     def post(self):
-
-        nickname = unquote(self.get_argument('nickname'))
-        message = unquote(self.get_argument('message'))
+        logging.info(self.current_user)
+        logging.info(self.get_argument('nickname'))
+        nickname = unescape(self.get_argument('nickname'))
+        message = unescape(self.get_argument('message'))
         logging.info("%s: %s" % (nickname, message))
         msg = ChatMessage(**{'nickname': nickname, 'message': message,
                              'channel': self.channel})
@@ -406,7 +448,7 @@ class LoginHandler(ChatifyJSONMessageHandler):
     """Allows users to enter the chat room.  Does no authentication."""
 
     def post(self, nickname):
-        nickname = unquote(nickname)
+        nickname = unescape(unquote(nickname)).decode('utf-8')
         if len(nickname) != 0:
 
             user = find_user_by_nickname(nickname)
@@ -419,7 +461,7 @@ class LoginHandler(ChatifyJSONMessageHandler):
 
                 ## respond to the client our success
                 self.set_status(200)
-                self.set_cookie('nickname',nickname)
+                self.set_cookie('nickname',nickname.encode('utf-8'))
                 self.add_to_payload('message',nickname + ' has entered the chat room')
 
             else:
@@ -435,7 +477,7 @@ class LoginHandler(ChatifyJSONMessageHandler):
 
     def delete(self, nickname):
         """ remove a user from the chat session"""
-        nickname = unquote(nickname)
+        nickname = unescape(unquote(nickname)).decode('utf-8')
         if len(nickname) != 0:
 
             ## remove our user and alert others in the chat room
