@@ -371,7 +371,6 @@ class ChatifyJSONMessageHandler(JSONMessageHandler):
             except Exception:
                 pass
             if nickname != None:
-                print(nickname)
                 nickname = unescape(nickname)
                 user = find_user_by_nickname(nickname)
                 if user != None:
@@ -424,8 +423,6 @@ class FeedHandler(ChatifyJSONMessageHandler):
 
     @authenticated
     def post(self):
-        logging.info(self.current_user)
-        logging.info(self.get_argument('nickname'))
         nickname = unescape(self.get_argument('nickname'))
         message = unescape(self.get_argument('message'))
         logging.info("%s: %s" % (nickname, message))
@@ -448,7 +445,7 @@ class LoginHandler(ChatifyJSONMessageHandler):
     """Allows users to enter the chat room.  Does no authentication."""
 
     def post(self, nickname):
-        nickname = unescape(unquote(nickname)).decode('utf-8')
+        nickname = unquote(nickname).decode('utf-8')
         if len(nickname) != 0:
 
             user = find_user_by_nickname(nickname)
@@ -477,7 +474,7 @@ class LoginHandler(ChatifyJSONMessageHandler):
 
     def delete(self, nickname):
         """ remove a user from the chat session"""
-        nickname = unescape(unquote(nickname)).decode('utf-8')
+        nickname = unquote(nickname).decode('utf-8')
         if len(nickname) != 0:
 
             ## remove our user and alert others in the chat room
