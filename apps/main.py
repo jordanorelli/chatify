@@ -85,6 +85,8 @@ def list_add_chat_message(chat_message, chat_messages_list):
     avoid sending duplicates."""
     chat_messages_list.append(chat_message)
 
+    #logging.info("adding message: %s" % chat_message.message)
+
     if len(chat_messages_list) > LIST_SIZE:
         chat_messages_list.pop(0)
 
@@ -193,6 +195,7 @@ def list_update_user_timestamp(user, target_list):
 def redis_update_user_timestamp(user, redis_server):
     """timestamps our active user and publishes the changes"""
     data = user.to_json()
+
     logging.info("updating users timestamp: %s" % data)
     # update our timestamp ordered set
     affected = redis_server.zadd("users_timestamp", user.nickname, user.timestamp)
@@ -213,6 +216,7 @@ def find_user_by_nickname(nickname):
 
 def list_find_user_by_nickname(nickname, user_list):
     """returns the first list item matching a nickname"""
+    logging.info("finding %s in user list " % nickname)
     users = filter(lambda x: x.nickname == nickname,
                    user_list)
     if len(users)==0:
@@ -222,6 +226,7 @@ def list_find_user_by_nickname(nickname, user_list):
 
 def redis_find_user_by_nickname(nickname, redis_server):
     """returns the user by nickname"""
+    logging.info("finding %s in redis " % nickname)
     key = "users:%s" % nickname
     data = redis_server.get(key)
 
@@ -256,7 +261,7 @@ def list_check_users_online(before_timestamp, users_list):
     expired_users = filter(lambda x: x.timestamp <= before_timestamp,
                    users_list)
     for user in expired_users:
-        msg = ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname);
+        msg = ChatMessage(nickname='system', message="%s can not been found in the room" % user.nickname, channel=user.channel);
 
         add_chat_message(msg)
         remove_user(user)
@@ -288,9 +293,11 @@ class User(Document):
     """a chat user"""
     timestamp = fields.IntField(required=True)
     nickname = fields.StringField(required=True, max_length=40)
+    channel = fields.StringField(required=True, max_length=40)
 
     def __init__(self, *args, **kwargs):
         super(User, self).__init__(*args, **kwargs)
+        self.nickname = self.nickname.decode('utf8')
         # seconds is enough here, we need an int
         self.timestamp = int(time.time())
 
@@ -323,14 +330,14 @@ class ChatifyJSONMessageHandler(JSONMessageHandler):
         """get our user from the request and set to self.current_user"""
         self.current_user = None
         try:
-            nickname = self.get_argument('nickname')
             self.channel = self.get_argument('channel', 'public')
+            nickname = self.get_argument('nickname')
             user = find_user_by_nickname(nickname)
             if user != None:
                     self.current_user = update_user_timestamp(user)
 
         except Exception:
-            None
+            pass
 
     def get_current_user(self):
         """return  self.current_user set in self.prepare()"""
@@ -404,7 +411,7 @@ class LoginHandler(ChatifyJSONMessageHandler):
 
             user = find_user_by_nickname(nickname)
             if user == None :
-                user=add_user(User(nickname=nickname))
+                user=add_user(User(nickname=nickname, channel = self.channel))
                 msg = ChatMessage(timestamp=int(time.time() * 1000), nickname='system',
                     message="%s has entered the room" % nickname, msgtype='system', channel=self.channel)
 
